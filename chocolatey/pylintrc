@@ -1,0 +1,25 @@
+[MASTER]
+recursive=yes
+ignore=CVS,.git,__pycache__,build,dist
+
+[MESSAGES CONTROL]
+disable=C0103,  # invalid-name
+        R0903,  # too-few-public-methods
+        R0913,  # too-many-arguments
+        W0621,  # redefined-outer-name (conflicts with pytest fixtures)
+        W0511   # fixme
+
+[FORMAT]
+max-line-length=120
+
+[BASIC]
+good-names=i,j,k,ex,Run,_,id,fp
+
+[SIMILARITIES]
+min-similarity-lines=7
+
+[TYPECHECK]
+ignored-modules=numpy,torch,tensorflow,cv2
+
+[MISCELLANEOUS]
+notes=FIXME,XXX,TODO
