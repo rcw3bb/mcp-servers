@@ -1,6 +1,6 @@
 [project]
 name = "mcp_server_choco"
-version = "1.0.0"
+version = "1.1.0"
 description = "An MCP server implementation for Chocolatey."
 authors = [
     {name = "Ron Webb",email = "ron@ronella.xyz"}

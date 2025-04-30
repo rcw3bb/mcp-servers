@@ -12,6 +12,8 @@ This project is an implementation of an MCP (Model Context Protocol) server for 
   - List installed packages.
 - **Manage Sources**:
   - List available Chocolatey sources.
+  - Add new package sources with authentication options.
+  - Remove package sources.
 - **Search Packages**: Search for available packages using a search term.
 
 ## :white_check_mark: ​Requirements
@@ -54,12 +56,19 @@ poetry -C C:\mcp-servers\chocolatey run python -m mcp_server_choco.server
 
 ### Available Tools
 
+#### Package Management
 - `list_installed_packages`: Lists all installed Chocolatey packages.
-- `list_sources`: Lists all configured Chocolatey sources.
-- `install_package`: Installs a Chocolatey package.
+- `install_package`: Installs a Chocolatey package with optional version specification.
 - `uninstall_package`: Uninstalls a Chocolatey package.
-- `upgrade_package`: Upgrades a Chocolatey package.
+- `upgrade_package`: Upgrades a Chocolatey package to the latest or a specific version.
 - `list_available_packages`: Lists available Chocolatey packages filtered by a search term.
+
+#### Source Management
+- `list_sources`: Lists all configured Chocolatey sources.
+- `add_source`: Adds a new Chocolatey source with optional authentication and priority settings.
+- `remove_source`: Removes a Chocolatey source.
+
+#### System Management
 - `install_chocolatey`: Installs Chocolatey if not already installed.
 
 ## Development

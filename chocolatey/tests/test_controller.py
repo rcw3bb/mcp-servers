@@ -11,6 +11,8 @@ from mcp_server_choco.controller import (
     ListAvailablePackagesController,
     UpgradePackageController,
     InstallChocolateyController,
+    AddSourceController,
+    RemoveSourceController,
     execute_tool
 )
 from mcp_server_choco.service import ChocolateyNotInstalledError
@@ -184,6 +186,97 @@ class TestControllers(unittest.TestCase):
         mock_install.assert_called_once_with()
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].text, "Failed to install Chocolatey")
+
+    @patch('mcp_server_choco.controller.add_source')
+    def test_add_source_controller_success(self, mock_add_source):
+        # Setup mock for successful source addition
+        mock_add_source.return_value = True
+        controller = AddSourceController()
+        result = controller.execute("add_source", {
+            "source_name": "test-source", 
+            "source_url": "https://test.repo/api/v2"
+        })
+        
+        mock_add_source.assert_called_once_with(
+            "test-source", "https://test.repo/api/v2", None, None, None
+        )
+        self.assertEqual(len(result), 1)
+        self.assertIsInstance(result[0], TextContent)
+        self.assertEqual(result[0].text, "Source 'test-source' added successfully")
+
+    @patch('mcp_server_choco.controller.add_source')
+    def test_add_source_controller_with_all_options(self, mock_add_source):
+        # Setup mock for successful source addition with all options
+        mock_add_source.return_value = True
+        controller = AddSourceController()
+        result = controller.execute("add_source", {
+            "source_name": "test-source", 
+            "source_url": "https://test.repo/api/v2",
+            "username": "testuser",
+            "password": "testpass",
+            "priority": 5
+        })
+        
+        mock_add_source.assert_called_once_with(
+            "test-source", "https://test.repo/api/v2", "testuser", "testpass", 5
+        )
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].text, "Source 'test-source' added successfully")
+
+    @patch('mcp_server_choco.controller.add_source')
+    def test_add_source_controller_failure(self, mock_add_source):
+        # Setup mock for failed source addition
+        mock_add_source.return_value = False
+        controller = AddSourceController()
+        result = controller.execute("add_source", {
+            "source_name": "test-source", 
+            "source_url": "https://test.repo/api/v2"
+        })
+        
+        self.assertEqual(result[0].text, "Failed to add source 'test-source'")
+
+    def test_add_source_controller_missing_name(self):
+        controller = AddSourceController()
+        with self.assertRaises(ValueError) as context:
+            controller.execute("add_source", {
+                "source_url": "https://test.repo/api/v2"
+            })
+        self.assertEqual(str(context.exception), "Source name is required.")
+
+    def test_add_source_controller_missing_url(self):
+        controller = AddSourceController()
+        with self.assertRaises(ValueError) as context:
+            controller.execute("add_source", {
+                "source_name": "test-source"
+            })
+        self.assertEqual(str(context.exception), "Source URL is required.")
+        
+    @patch('mcp_server_choco.controller.remove_source')
+    def test_remove_source_controller_success(self, mock_remove_source):
+        # Setup mock for successful source removal
+        mock_remove_source.return_value = True
+        controller = RemoveSourceController()
+        result = controller.execute("remove_source", {"source_name": "test-source"})
+        
+        mock_remove_source.assert_called_once_with("test-source")
+        self.assertEqual(len(result), 1)
+        self.assertIsInstance(result[0], TextContent)
+        self.assertEqual(result[0].text, "Source 'test-source' removed successfully")
+
+    @patch('mcp_server_choco.controller.remove_source')
+    def test_remove_source_controller_failure(self, mock_remove_source):
+        # Setup mock for failed source removal
+        mock_remove_source.return_value = False
+        controller = RemoveSourceController()
+        result = controller.execute("remove_source", {"source_name": "test-source"})
+        
+        self.assertEqual(result[0].text, "Failed to remove source 'test-source'")
+
+    def test_remove_source_controller_missing_name(self):
+        controller = RemoveSourceController()
+        with self.assertRaises(ValueError) as context:
+            controller.execute("remove_source", {})
+        self.assertEqual(str(context.exception), "Source name is required.")
 
     def test_execute_tool_unknown(self):
         with self.assertRaises(McpError):

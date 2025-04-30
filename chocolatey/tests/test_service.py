@@ -9,7 +9,10 @@ from mcp_server_choco.service import (
     uninstall_package,
     upgrade_package,
     list_available_packages,
+    add_source,
+    remove_source,
     ChocolateyNotInstalledError,
+    ChocolateyCommandError,
     _run_elevated_choco_command,
     _run_choco_command
 )
@@ -453,6 +456,138 @@ class TestChocolateyService(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             list_sources()
         self.assertIn("Failed to list Chocolatey sources", str(context.exception))
+        
+    @patch('subprocess.Popen')
+    @patch('shutil.which')
+    def test_add_source_success(self, mock_which, mock_popen):
+        # Setup mock
+        mock_which.return_value = "/path/to/choco"  # simulate choco being installed
+        mock_process = MagicMock()
+        mock_process.returncode = 0
+        mock_popen.return_value.__enter__.return_value = mock_process
+
+        result = add_source("test-source", "https://test.repo/api/v2")
+        self.assertTrue(result)
+        mock_popen.assert_called_once()
+        
+        # Check correct command was formed
+        args = mock_popen.call_args[0]
+        self.assertEqual(args[0][0], 'powershell.exe')
+        self.assertIn('source add -n=test-source -s=https://test.repo/api/v2', args[0][2])
+        self.assertIn('--priority=0', args[0][2])  # Check that default priority is included
+        self.assertIn('-y', args[0][2])
+
+    @patch('subprocess.Popen')
+    @patch('shutil.which')
+    def test_add_source_with_all_options(self, mock_which, mock_popen):
+        # Setup mock
+        mock_which.return_value = "/path/to/choco"  # simulate choco being installed
+        mock_process = MagicMock()
+        mock_process.returncode = 0
+        mock_popen.return_value.__enter__.return_value = mock_process
+
+        result = add_source(
+            "test-source", 
+            "https://test.repo/api/v2", 
+            username="testuser", 
+            password="testpass", 
+            priority=5
+        )
+        self.assertTrue(result)
+        
+        # Check all parameters were included
+        args = mock_popen.call_args[0]
+        command_string = args[0][2]
+        self.assertIn('source add -n=test-source -s=https://test.repo/api/v2', command_string)
+        self.assertIn('-u=testuser', command_string)
+        self.assertIn('-p=testpass', command_string)
+        self.assertIn('--priority=5', command_string)
+        self.assertIn('-y', command_string)
+
+    @patch('subprocess.Popen')
+    @patch('shutil.which')
+    def test_add_source_failure(self, mock_which, mock_popen):
+        # Setup mock
+        mock_which.return_value = "/path/to/choco"  # simulate choco being installed
+        mock_process = MagicMock()
+        mock_process.returncode = 1
+        mock_popen.return_value.__enter__.return_value = mock_process
+
+        result = add_source("test-source", "https://test.repo/api/v2")
+        self.assertFalse(result)
+
+    def test_add_source_empty_name(self):
+        with self.assertRaises(ChocolateyCommandError) as context:
+            add_source("", "https://test.repo/api/v2")
+        self.assertEqual(str(context.exception), "Source name cannot be empty")
+
+    def test_add_source_empty_url(self):
+        with self.assertRaises(ChocolateyCommandError) as context:
+            add_source("test-source", "")
+        self.assertEqual(str(context.exception), "Source URL cannot be empty")
+
+    @patch('shutil.which')
+    def test_add_source_chocolatey_not_installed(self, mock_which):
+        # Setup mock to simulate choco not being available
+        mock_which.return_value = None
+        
+        # Assert error is raised
+        with self.assertRaises(ChocolateyNotInstalledError) as context:
+            add_source("test-source", "https://test.repo/api/v2")
+        self.assertIn("Chocolatey is not installed or not available in PATH", str(context.exception))
+        
+    @patch('subprocess.Popen')
+    @patch('shutil.which')
+    def test_remove_source_success(self, mock_which, mock_popen):
+        # Setup mock
+        mock_which.return_value = "/path/to/choco"  # simulate choco being installed
+        mock_process = MagicMock()
+        mock_process.returncode = 0
+        mock_popen.return_value.__enter__.return_value = mock_process
+
+        result = remove_source("test-source")
+        self.assertTrue(result)
+        mock_popen.assert_called_once()
+        
+        # Check correct command was formed
+        args = mock_popen.call_args[0]
+        self.assertEqual(args[0][0], 'powershell.exe')
+        self.assertIn('source remove -n=test-source -y', args[0][2])
+
+    @patch('subprocess.Popen')
+    @patch('shutil.which')
+    def test_remove_source_failure(self, mock_which, mock_popen):
+        # Setup mock
+        mock_which.return_value = "/path/to/choco"  # simulate choco being installed
+        mock_process = MagicMock()
+        mock_process.returncode = 1
+        mock_popen.return_value.__enter__.return_value = mock_process
+
+        result = remove_source("test-source")
+        self.assertFalse(result)
+
+    def test_remove_source_empty_name(self):
+        with self.assertRaises(ChocolateyCommandError) as context:
+            remove_source("")
+        self.assertEqual(str(context.exception), "Source name cannot be empty")
+        
+        with self.assertRaises(ChocolateyCommandError) as context:
+            remove_source(None)
+        self.assertEqual(str(context.exception), "Source name cannot be empty")
+        
+        with self.assertRaises(ChocolateyCommandError) as context:
+            remove_source("   ")
+        self.assertEqual(str(context.exception), "Source name cannot be empty")
+
+    @patch('shutil.which')
+    def test_remove_source_chocolatey_not_installed(self, mock_which):
+        # Setup mock to simulate choco not being available
+        mock_which.return_value = None
+        
+        # Assert error is raised
+        with self.assertRaises(ChocolateyNotInstalledError) as context:
+            remove_source("test-source")
+        self.assertIn("Chocolatey is not installed or not available in PATH", str(context.exception))
 
 if __name__ == '__main__':
     unittest.main()

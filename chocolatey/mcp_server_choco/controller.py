@@ -21,6 +21,8 @@ from mcp_server_choco.service import (
     list_available_packages,
     upgrade_package,
     install_chocolatey,
+    add_source,
+    remove_source,
     ChocolateyNotInstalledError
 )
 from mcp_server_choco.util import setup_logger
@@ -312,6 +314,113 @@ class InstallChocolateyController(BaseController):
             text="Chocolatey installed successfully" if result else "Failed to install Chocolatey"
         )]
 
+class AddSourceController(BaseController):
+    """Controller for adding a Chocolatey package source."""
+    name: str = "add_source"
+    description: str = "Adds a new Chocolatey source repository."
+    input_schema: Dict[str, Any] = {
+        "type": "object",
+        "required": ["source_name", "source_url"],
+        "properties": {
+            "source_name": {
+                "type": "string",
+                "description": "The name of the source to add."
+            },
+            "source_url": {
+                "type": "string",
+                "description": "URL of the package source."
+            },
+            "username": {
+                "type": "string",
+                "description": "Optional username for authenticated sources."
+            },
+            "password": {
+                "type": "string",
+                "description": "Optional password for authenticated sources."
+            },
+            "priority": {
+                "type": "integer",
+                "description": "Optional priority for the source."
+            }
+        }
+    }
+
+    def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
+        """Execute the add_source tool.
+
+        Args:
+            name (str): The name of the tool to execute.
+            arguments (dict): The arguments for the tool, including source_name and source_url.
+
+        Returns:
+            Sequence[TextContent]: A sequence of TextContent objects with the operation result.
+        """
+        source_name = arguments.get("source_name")
+        source_url = arguments.get("source_url")
+
+        if not source_name:
+            logger.error("Source name is required but not provided")
+            raise ValueError("Source name is required.")
+
+        if not source_url:
+            logger.error("Source URL is required but not provided")
+            raise ValueError("Source URL is required.")
+
+        username = arguments.get("username")
+        password = arguments.get("password")
+        priority = arguments.get("priority")
+
+        logger.info("Adding source: %s with URL: %s", source_name, source_url)
+        result = add_source(source_name, source_url, username, password, priority)
+        logger.debug("Add source operation result: %s", result)
+
+        return [TextContent(
+            type="text",
+            text=f"Source '{source_name}' added successfully" if result else f"Failed to add source '{source_name}'"
+        )]
+
+class RemoveSourceController(BaseController):
+    """Controller for removing a Chocolatey package source."""
+    name: str = "remove_source"
+    description: str = "Removes a Chocolatey source repository."
+    input_schema: Dict[str, Any] = {
+        "type": "object",
+        "required": ["source_name"],
+        "properties": {
+            "source_name": {
+                "type": "string",
+                "description": "The name of the source to remove."
+            }
+        }
+    }
+
+    def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
+        """Execute the remove_source tool.
+
+        Args:
+            name (str): The name of the tool to execute.
+            arguments (dict): The arguments for the tool, including source_name.
+
+        Returns:
+            Sequence[TextContent]: A sequence of TextContent objects with the operation result.
+        """
+        source_name = arguments.get("source_name")
+
+        if not source_name:
+            logger.error("Source name is required but not provided")
+            raise ValueError("Source name is required.")
+
+        logger.info("Removing source: %s", source_name)
+        result = remove_source(source_name)
+        logger.debug("Remove source operation result: %s", result)
+
+        success_msg = f"Source '{source_name}' removed successfully"
+        failure_msg = f"Failed to remove source '{source_name}'"
+        return [TextContent(
+            type="text",
+            text=success_msg if result else failure_msg
+        )]
+
 def get_controller_registry() -> tuple[BaseController]:
     """Retrieve the registry of all available controllers.
 
@@ -325,7 +434,9 @@ def get_controller_registry() -> tuple[BaseController]:
         UninstallPackageController(),
         ListAvailablePackagesController(),
         UpgradePackageController(),
-        InstallChocolateyController()
+        InstallChocolateyController(),
+        AddSourceController(),
+        RemoveSourceController()
     )
 
 def execute_tool(name: str, arguments: dict) -> Sequence[TextContent]:
@@ -349,7 +460,6 @@ def execute_tool(name: str, arguments: dict) -> Sequence[TextContent]:
             try:
                 return controller.execute(name, arguments)
             except ChocolateyNotInstalledError:
-                # Only allow install_chocolatey command when Chocolatey is not installed
                 if name == "install_chocolatey":
                     return controller.execute(name, arguments)
                 msg = "Chocolatey is not installed. Please run the 'install_chocolatey' command first."

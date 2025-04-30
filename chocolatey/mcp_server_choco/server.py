@@ -14,7 +14,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource, ErrorData
 from mcp.shared.exceptions import McpError
 from mcp_server_choco.controller import get_controller_registry, execute_tool
-from mcp_server_choco.util import setup_logger
+from mcp_server_choco.util import setup_logger, get_project_info
 
 logger = setup_logger(__name__)
 
@@ -65,7 +65,9 @@ async def main():
     Raises:
         Exception: If there is an error during server execution.
     """
-    logger.info("Starting Chocolatey Server")
+
+    project_info = get_project_info()
+    logger.info("Starting %s", project_info)
     try:
         async with stdio_server() as (read_stream, write_stream):
             logger.info("Server initialized, starting main loop")

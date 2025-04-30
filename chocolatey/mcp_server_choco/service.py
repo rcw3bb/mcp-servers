@@ -352,3 +352,89 @@ def list_available_packages(search_term: str = "") -> list[str]:
     except Exception as e:
         logger.error("Failed to list available Chocolatey packages: %s", str(e))
         raise ChocolateyCommandError(f"Failed to list available Chocolatey packages: {str(e)}") from e
+
+def add_source(
+    source_name: str,
+    source_url: str,
+    username: str | None = None,
+    password: str | None = None,
+    priority: int = 0
+) -> bool:
+    """Add a new Chocolatey package source.
+    
+    Args:
+        source_name: Name of the source to add.
+        source_url: URL of the package source.
+        username: Optional username for authenticated sources.
+        password: Optional password for authenticated sources.
+        priority: Optional priority for the source (0 is the default).
+        
+    Returns:
+        bool: True if source was added successfully, False otherwise.
+        
+    Raises:
+        ChocolateyCommandError: If there is an error adding the source or required parameters are missing.
+        ChocolateyNotInstalledError: If Chocolatey is not installed.
+    """
+    if not source_name or not source_name.strip():
+        logger.error("Source name cannot be empty")
+        raise ChocolateyCommandError("Source name cannot be empty")
+
+    if not source_url or not source_url.strip():
+        logger.error("Source URL cannot be empty")
+        raise ChocolateyCommandError("Source URL cannot be empty")
+
+    try:
+        logger.info("Adding source: %s with URL: %s", source_name, source_url)
+
+        # Build the command with required parameters
+        command = f"source add -n={source_name} -s={source_url}"
+
+        # Add optional parameters if provided
+        if username:
+            command += f" -u={username}"
+        if password:
+            command += f" -p={password}"
+        if priority is not None:
+            command += f" --priority={priority}"
+
+        # Always add the -y flag to confirm action
+        command += " -y"
+
+        result = _run_elevated_choco_command(command)
+        logger.debug("Add source operation %s", "succeeded" if result else "failed")
+        return result
+    except ChocolateyNotInstalledError:
+        raise
+    except Exception as e:
+        logger.error("Failed to add source %s: %s", source_name, str(e))
+        raise ChocolateyCommandError(f"Failed to add source {source_name}: {str(e)}") from e
+
+def remove_source(source_name: str) -> bool:
+    """Remove a Chocolatey package source.
+    
+    Args:
+        source_name: Name of the source to remove.
+        
+    Returns:
+        bool: True if source was removed successfully, False otherwise.
+        
+    Raises:
+        ChocolateyCommandError: If there is an error removing the source or source name is empty.
+        ChocolateyNotInstalledError: If Chocolatey is not installed.
+    """
+    if not source_name or not source_name.strip():
+        logger.error("Source name cannot be empty")
+        raise ChocolateyCommandError("Source name cannot be empty")
+
+    try:
+        logger.info("Removing source: %s", source_name)
+        command = f"source remove -n={source_name} -y"
+        result = _run_elevated_choco_command(command)
+        logger.debug("Remove source operation %s", "succeeded" if result else "failed")
+        return result
+    except ChocolateyNotInstalledError:
+        raise
+    except Exception as e:
+        logger.error("Failed to remove source %s: %s", source_name, str(e))
+        raise ChocolateyCommandError(f"Failed to remove source {source_name}: {str(e)}") from e
