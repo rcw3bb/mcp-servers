@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 : 2025-05-07
+
+### Update
+- DRY the logging level
+
 ## 1.1.0 : 2025-04-30
 
 ### New
