@@ -1,0 +1,25 @@
+[project]
+name = "mcp_server_winget"
+version = "1.0.0"
+description = "An MCP server implementation for Windows Package Manager."
+authors = [
+    {name = "Ron Webb",email = "ron@ronella.xyz"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "mcp (>=1.6.0,<2.0.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^6.1.1"
+pylint = "^3.3.6"
+pytest-asyncio = "^0.21.1"

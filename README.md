@@ -5,6 +5,7 @@ A collection of MCP (Model Context Protocol) server implementations. MCP is a pr
 ## :book: Collection
 
 * **[Chocolatey](chocolatey/README.md):** An implementation of an MCP server for managing Chocolatey packages.
+* **[Winget](winget/README.md):** An implementation of an MCP server for managing Windows Package Manager (Winget) packages.
 
 ## :key: License
 
