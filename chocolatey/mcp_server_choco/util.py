@@ -22,14 +22,16 @@ def setup_logger(name: str) -> logging.Logger:
     Returns:
         A configured logger instance
     """
+    log_level = logging.INFO
+
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(log_level)
 
     console_handler = logging.StreamHandler()
     file_handler = logging.FileHandler('mcp_server_choco.log')
 
-    console_handler.setLevel(logging.INFO)
-    file_handler.setLevel(logging.INFO)
+    console_handler.setLevel(log_level)
+    file_handler.setLevel(log_level)
 
     log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(log_format)
