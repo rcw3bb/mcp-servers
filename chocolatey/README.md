@@ -43,7 +43,7 @@ This project is an implementation of an MCP (Model Context Protocol) server for 
 
 Use the following syntax on MCP Client:
 ```sh
-poetry -C <CHOCO_MCP_DIR> run python -m mcp_server_choco.server
+poetry -C <CHOCO_MCP_DIR> run python -m mcp_server_choco
 ```
 
 Where **<CHOCO_MCP_DIR>** is the `chocolatey directory` inside `mcp-servers local repository directory`. 
@@ -51,7 +51,7 @@ Where **<CHOCO_MCP_DIR>** is the `chocolatey directory` inside `mcp-servers loca
 For example, if the **mcp-servers** is `C:\mcp-servers` then the **CHOCO_MCP_DIR** is `C:\mcp-servers\chocolatey`. The actual command must be:
 
 ```sh
-poetry -C C:\mcp-servers\chocolatey run python -m mcp_server_choco.server
+poetry -C C:\mcp-servers\chocolatey run python -m mcp_server_choco
 ```
 
 ### Available Tools
@@ -72,6 +72,19 @@ poetry -C C:\mcp-servers\chocolatey run python -m mcp_server_choco.server
 - `install_chocolatey`: Installs Chocolatey if not already installed.
 
 ## Development
+
+
+### Re-adding mcp-commons
+
+If you have updated or pulled new changes to the `mcp-commons` shared library, you need to re-add it to your Poetry environment to ensure the latest version is used.
+
+Run the following command:
+
+```sh
+poetry run readd-mcp-commons
+```
+
+This script will update your local Poetry environment to use the latest version of `mcp-commons` from your local path.
 
 ### Running Tests
 

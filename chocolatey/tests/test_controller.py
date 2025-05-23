@@ -13,7 +13,6 @@ from mcp_server_choco.controller import (
     InstallChocolateyController,
     AddSourceController,
     RemoveSourceController,
-    execute_tool
 )
 from mcp_server_choco.service import ChocolateyNotInstalledError
 
@@ -39,7 +38,6 @@ class TestControllers(unittest.TestCase):
         mock_list.return_value = ["package1 1.0.0", "package2 2.0.0"]
         controller = ListInstalledPackagesController()
         result = controller.execute("list_installed_packages", {})
-        
         self.assertEqual(len(result), 1)
         self.assertIsInstance(result[0], TextContent)
         self.assertEqual(result[0].text, "package1 1.0.0\npackage2 2.0.0")
@@ -49,7 +47,6 @@ class TestControllers(unittest.TestCase):
         mock_list.return_value = ["source1", "source2"]
         controller = ListSourcesController()
         result = controller.execute("list_sources", {})
-        
         self.assertEqual(len(result), 1)
         self.assertIsInstance(result[0], TextContent)
         self.assertEqual(result[0].text, "source1\nsource2")
@@ -59,6 +56,9 @@ class TestControllers(unittest.TestCase):
         mock_install.return_value = True
         controller = InstallPackageController()
         result = controller.execute("install_package", {"package_name": "test-pkg"})
+        self.assertEqual(len(result), 1)
+        self.assertIsInstance(result[0], TextContent)
+        self.assertIn("test-pkg", result[0].text)
         
         mock_install.assert_called_once_with("test-pkg", None)
         self.assertEqual(len(result), 1)
@@ -88,7 +88,6 @@ class TestControllers(unittest.TestCase):
         mock_install.return_value = False
         controller = InstallPackageController()
         result = controller.execute("install_package", {"package_name": "test-pkg"})
-        
         self.assertEqual(result[0].text, "test-pkg installation failed.")
 
     @patch('mcp_server_choco.controller.uninstall_package')
@@ -119,7 +118,6 @@ class TestControllers(unittest.TestCase):
         mock_list.return_value = ["package1 1.0.0", "package2 2.0.0"]
         controller = ListAvailablePackagesController()
         result = controller.execute("list_available_packages", {"search_term": "test"})
-        
         mock_list.assert_called_once_with("test")
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].text, "package1 1.0.0\npackage2 2.0.0")
@@ -277,38 +275,6 @@ class TestControllers(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             controller.execute("remove_source", {})
         self.assertEqual(str(context.exception), "Source name is required.")
-
-    def test_execute_tool_unknown(self):
-        with self.assertRaises(McpError):
-            execute_tool("unknown_tool", {})
-
-    def test_execute_tool_valid(self):
-        with patch('mcp_server_choco.controller.list_installed_packages') as mock_list:
-            mock_list.return_value = ["package1"]
-            result = execute_tool("list_installed_packages", {})
-            self.assertIsInstance(result, list)
-            self.assertEqual(len(result), 1)
-            self.assertIsInstance(result[0], TextContent)
-
-    @patch('mcp_server_choco.controller.list_installed_packages')
-    def test_execute_tool_chocolatey_not_installed(self, mock_list):
-        mock_list.side_effect = ChocolateyNotInstalledError("Chocolatey not installed")
-        result = execute_tool("list_installed_packages", {})
-        self.assertEqual(result[0].text, "Chocolatey is not installed. Please run the 'install_chocolatey' command first.")
-
-    @patch('mcp_server_choco.controller.list_installed_packages')
-    def test_execute_tool_with_general_exception(self, mock_list):
-        mock_list.side_effect = Exception("Some error")
-        with self.assertRaises(McpError) as context:
-            execute_tool("list_installed_packages", {})
-        self.assertEqual(context.exception.error.message, "Some error")
-        self.assertEqual(context.exception.error.code, 500)
-
-    @patch('mcp_server_choco.controller.install_chocolatey')
-    def test_execute_tool_chocolatey_not_installed_with_install_command(self, mock_install):
-        mock_install.side_effect = [ChocolateyNotInstalledError("Not installed"), True]
-        result = execute_tool("install_chocolatey", {})
-        self.assertEqual(result[0].text, "Chocolatey installed successfully")
 
     def test_base_controller_execute(self):
         base = BaseController(name="test", description="test", input_schema={})

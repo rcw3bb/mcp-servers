@@ -9,10 +9,12 @@ Author: Ron Webb
 Since: 1.0.0
 """
 
-from typing import Dict, Any, Sequence
-from pydantic import BaseModel
-from mcp import McpError
-from mcp.types import Tool, TextContent, ErrorData
+from collections.abc import Sequence
+from typing import Any, Dict
+from mcp_commons.util import setup_logger
+from mcp_commons.controller import BaseController, AbstractControllerRegistry
+from mcp_commons.exception import McpCommonsError
+from mcp.types import TextContent
 from mcp_server_choco.service import (
     list_installed_packages,
     list_sources,
@@ -23,71 +25,18 @@ from mcp_server_choco.service import (
     install_chocolatey,
     add_source,
     remove_source,
-    ChocolateyNotInstalledError
+    ChocolateyNotInstalledError,
 )
-from mcp_server_choco.util import setup_logger
 
 logger = setup_logger(__name__)
 
-class BaseController(BaseModel):
-    """Base class for all controllers.
-
-    Attributes:
-        name (str): The name of tool.
-        description (str): A brief description of the tool's functionality.
-        input_schema (Dict[str, Any]): The JSON schema for the input arguments.
-    """
-    name: str
-    description: str
-    input_schema: Dict[str, Any]
-
-    def tool(self) -> Tool:
-        """Create a Tool object representing this controller.
-
-        Returns:
-            Tool: A Tool object with valid name, description, and input schema.
-        """
-        logger.debug("Creating tool for controller: %s", self.name)
-        return Tool(
-            name=self.name,
-            description=self.description,
-            inputSchema=self.input_schema
-        )
-
-    def can_execute(self, name: str) -> bool:
-        """Check if this controller can execute a given tool name.
-
-        Args:
-            name (str): The name of the tool to check.
-
-        Returns:
-            bool: True if the controller can execute the tool, False otherwise.
-        """
-        can_exec = self.name == name
-        logger.debug("Checking if controller %s can execute %s: %s", self.name, name, can_exec)
-        return can_exec
-
-    def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
-        """Execute the tool with the given name and arguments.
-
-        Args:
-            name (str): The name of the tool to execute.
-            arguments (dict): The arguments for the tool.
-
-        Raises:
-            NotImplementedError: This method must be implemented by subclasses.
-        """
-        raise NotImplementedError("Subclasses must implement execute method")
 
 class ListInstalledPackagesController(BaseController):
     """Controller for listing installed Chocolatey packages."""
+
     name: str = "list_installed_packages"
     description: str = "Lists all installed Chocolatey packages."
-    input_schema: Dict[str, Any] = {
-        "type": "object",
-        "required": [],
-        "properties": {}
-    }
+    input_schema: Dict[str, Any] = {"type": "object", "required": [], "properties": {}}
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
         """Execute the list_installed_packages tool.
@@ -104,15 +53,13 @@ class ListInstalledPackagesController(BaseController):
         logger.debug("Found %d installed packages", len(packages))
         return [TextContent(type="text", text="\n".join(packages))]
 
+
 class ListSourcesController(BaseController):
     """Controller for listing Chocolatey sources."""
+
     name: str = "list_sources"
     description: str = "Lists all Chocolatey sources."
-    input_schema: Dict[str, Any] = {
-        "type": "object",
-        "required": [],
-        "properties": {}
-    }
+    input_schema: Dict[str, Any] = {"type": "object", "required": [], "properties": {}}
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
         """Execute the list_sources tool.
@@ -129,8 +76,10 @@ class ListSourcesController(BaseController):
         logger.debug("Found %d sources", len(sources))
         return [TextContent(type="text", text="\n".join(sources))]
 
+
 class InstallPackageController(BaseController):
     """Controller for installing a Chocolatey package."""
+
     name: str = "install_package"
     description: str = "Installs a Chocolatey package."
     input_schema: Dict[str, Any] = {
@@ -139,13 +88,13 @@ class InstallPackageController(BaseController):
         "properties": {
             "package_name": {
                 "type": "string",
-                "description": "The name of the package to install."
+                "description": "The name of the package to install.",
             },
             "version": {
                 "type": "string",
-                "description": "Optional specific version to install"
-            }
-        }
+                "description": "Optional specific version to install",
+            },
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -171,8 +120,10 @@ class InstallPackageController(BaseController):
         status = "installed" if result else "installation failed."
         return [TextContent(type="text", text=f"{package_name}{version_text} {status}")]
 
+
 class UninstallPackageController(BaseController):
     """Controller for uninstalling a Chocolatey package."""
+
     name: str = "uninstall_package"
     description: str = "Uninstalls a Chocolatey package."
     input_schema: Dict[str, Any] = {
@@ -181,9 +132,9 @@ class UninstallPackageController(BaseController):
         "properties": {
             "package_name": {
                 "type": "string",
-                "description": "The name of the package to uninstall."
+                "description": "The name of the package to uninstall.",
             }
-        }
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -204,13 +155,21 @@ class UninstallPackageController(BaseController):
         logger.info("Uninstalling package: %s", package_name)
         result = uninstall_package(package_name)
         logger.debug("Uninstallation result: %s", result)
-        return [TextContent(
-            type="text",
-            text=f"{package_name} uninstalled" if result else f"Failed to uninstall {package_name}."
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=(
+                    f"{package_name} uninstalled"
+                    if result
+                    else f"Failed to uninstall {package_name}."
+                ),
+            )
+        ]
+
 
 class ListAvailablePackagesController(BaseController):
     """Controller for listing available Chocolatey packages filtered by search term."""
+
     name: str = "list_available_packages"
     description: str = "Lists available Chocolatey packages filtered by search term."
     input_schema: Dict[str, Any] = {
@@ -219,9 +178,9 @@ class ListAvailablePackagesController(BaseController):
         "properties": {
             "search_term": {
                 "type": "string",
-                "description": "Search term to filter packages"
+                "description": "Search term to filter packages",
             }
-        }
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -244,8 +203,10 @@ class ListAvailablePackagesController(BaseController):
         logger.debug("Found %d available packages", len(packages))
         return [TextContent(type="text", text="\n".join(packages))]
 
+
 class UpgradePackageController(BaseController):
     """Controller for upgrading a Chocolatey package."""
+
     name: str = "upgrade_package"
     description: str = "Upgrades a Chocolatey package."
     input_schema: Dict[str, Any] = {
@@ -254,13 +215,13 @@ class UpgradePackageController(BaseController):
         "properties": {
             "package_name": {
                 "type": "string",
-                "description": "The name of the package to upgrade."
+                "description": "The name of the package to upgrade.",
             },
             "version": {
                 "type": "string",
-                "description": "Optional specific version to upgrade to"
-            }
-        }
+                "description": "Optional specific version to upgrade to",
+            },
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -279,22 +240,30 @@ class UpgradePackageController(BaseController):
             logger.error("Package name is required but not provided")
             raise ValueError("Package name is required.")
 
-        logger.info("Upgrading package: %s%s", package_name, f" to version {version}" if version else "")
+        logger.info(
+            "Upgrading package: %s%s",
+            package_name,
+            f" to version {version}" if version else "",
+        )
         result = upgrade_package(package_name, version)
         logger.debug("Upgrade result: %s", result)
         version_text = f" version {version}" if version else ""
         upgrade_text = "upgraded successfully" if result else "upgrade failed."
-        return [TextContent(type="text", text=f"{package_name}{version_text} {upgrade_text}")]
+        return [
+            TextContent(
+                type="text", text=f"{package_name}{version_text} {upgrade_text}"
+            )
+        ]
+
 
 class InstallChocolateyController(BaseController):
     """Controller for installing Chocolatey package manager."""
+
     name: str = "install_chocolatey"
-    description: str = "Installs Chocolatey package manager if it's not already installed."
-    input_schema: Dict[str, Any] = {
-        "type": "object",
-        "required": [],
-        "properties": {}
-    }
+    description: str = (
+        "Installs Chocolatey package manager if it's not already installed."
+    )
+    input_schema: Dict[str, Any] = {"type": "object", "required": [], "properties": {}}
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
         """Execute the install_chocolatey tool.
@@ -309,13 +278,21 @@ class InstallChocolateyController(BaseController):
         logger.info("Executing install_chocolatey")
         result = install_chocolatey()
         logger.debug("Installation result: %s", result)
-        return [TextContent(
-            type="text",
-            text="Chocolatey installed successfully" if result else "Failed to install Chocolatey"
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=(
+                    "Chocolatey installed successfully"
+                    if result
+                    else "Failed to install Chocolatey"
+                ),
+            )
+        ]
+
 
 class AddSourceController(BaseController):
     """Controller for adding a Chocolatey package source."""
+
     name: str = "add_source"
     description: str = "Adds a new Chocolatey source repository."
     input_schema: Dict[str, Any] = {
@@ -324,25 +301,25 @@ class AddSourceController(BaseController):
         "properties": {
             "source_name": {
                 "type": "string",
-                "description": "The name of the source to add."
+                "description": "The name of the source to add.",
             },
             "source_url": {
                 "type": "string",
-                "description": "URL of the package source."
+                "description": "URL of the package source.",
             },
             "username": {
                 "type": "string",
-                "description": "Optional username for authenticated sources."
+                "description": "Optional username for authenticated sources.",
             },
             "password": {
                 "type": "string",
-                "description": "Optional password for authenticated sources."
+                "description": "Optional password for authenticated sources.",
             },
             "priority": {
                 "type": "integer",
-                "description": "Optional priority for the source."
-            }
-        }
+                "description": "Optional priority for the source.",
+            },
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -374,13 +351,21 @@ class AddSourceController(BaseController):
         result = add_source(source_name, source_url, username, password, priority)
         logger.debug("Add source operation result: %s", result)
 
-        return [TextContent(
-            type="text",
-            text=f"Source '{source_name}' added successfully" if result else f"Failed to add source '{source_name}'"
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=(
+                    f"Source '{source_name}' added successfully"
+                    if result
+                    else f"Failed to add source '{source_name}'"
+                ),
+            )
+        ]
+
 
 class RemoveSourceController(BaseController):
     """Controller for removing a Chocolatey package source."""
+
     name: str = "remove_source"
     description: str = "Removes a Chocolatey source repository."
     input_schema: Dict[str, Any] = {
@@ -389,9 +374,9 @@ class RemoveSourceController(BaseController):
         "properties": {
             "source_name": {
                 "type": "string",
-                "description": "The name of the source to remove."
+                "description": "The name of the source to remove.",
             }
-        }
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -416,56 +401,54 @@ class RemoveSourceController(BaseController):
 
         success_msg = f"Source '{source_name}' removed successfully"
         failure_msg = f"Failed to remove source '{source_name}'"
-        return [TextContent(
-            type="text",
-            text=success_msg if result else failure_msg
-        )]
+        return [TextContent(type="text", text=success_msg if result else failure_msg)]
 
-def get_controller_registry() -> tuple[BaseController]:
-    """Retrieve the registry of all available controllers.
 
-    Returns:
-        tuple[BaseController]: A tuple containing all controller instances.
+class ControllerRegistry(AbstractControllerRegistry):
+    """Registry for managing controllers.
+
+    This class provides methods to retrieve all available controllers.
     """
-    return (
-        ListInstalledPackagesController(),
-        ListSourcesController(),
-        InstallPackageController(),
-        UninstallPackageController(),
-        ListAvailablePackagesController(),
-        UpgradePackageController(),
-        InstallChocolateyController(),
-        AddSourceController(),
-        RemoveSourceController()
-    )
 
-def execute_tool(name: str, arguments: dict) -> Sequence[TextContent]:
-    """Execute a tool by its name with the provided arguments.
+    def get_registry(self) -> Sequence[BaseController]:
+        """Get all registered controllers.
 
-    Args:
-        name (str): The name of the tool to execute.
-        arguments (dict): A dictionary of arguments to pass to the tool.
+        Returns:
+            Sequence[BaseController]: A sequence containing all available controller instances.
+        """
 
-    Returns:
-        Sequence[TextContent]: The result of the tool execution as a sequence of TextContent objects.
+        return (
+            ListInstalledPackagesController(),
+            ListSourcesController(),
+            InstallPackageController(),
+            UninstallPackageController(),
+            ListAvailablePackagesController(),
+            UpgradePackageController(),
+            InstallChocolateyController(),
+            AddSourceController(),
+            RemoveSourceController(),
+        )
 
-    Raises:
-        McpError: If the tool is not found or an error occurs during execution.
-    """
-    logger.info("Looking for controller to execute tool: %s", name)
-    logger.debug("Tool arguments: %s", arguments)
-    for controller in get_controller_registry():
-        if controller.can_execute(name):
-            logger.info("Found controller %s for tool %s", controller.name, name)
-            try:
-                return controller.execute(name, arguments)
-            except ChocolateyNotInstalledError:
-                if name == "install_chocolatey":
-                    return controller.execute(name, arguments)
-                msg = "Chocolatey is not installed. Please run the 'install_chocolatey' command first."
-                return [TextContent(type="text", text=msg)]
-            except Exception as e:
-                logger.error("Error executing tool %s: %s", name, str(e))
-                raise McpError(ErrorData(message=str(e), code=500)) from e
-    logger.error("No controller found for tool: %s", name)
-    raise McpError(ErrorData(message="Unknown tool.", code=404))
+    def error_handler(
+        self,
+        exception: McpCommonsError,
+        controller: BaseController,
+        tool_name: str,
+        arguments: dict,
+    ) -> list[TextContent]:
+        """Handle controller errors.
+
+        Args:
+            exception (ControllerError): The exception to handle.
+
+        Returns:
+            list[TextContent]: A list of TextContent objects describing the error.
+        """
+
+        if isinstance(exception, ChocolateyNotInstalledError):
+            if tool_name == "install_chocolatey":
+                return controller.execute(tool_name, arguments)
+            msg = "Chocolatey is not installed. Please run the 'install_chocolatey' command first."
+            return [TextContent(type="text", text=msg)]
+
+        raise exception

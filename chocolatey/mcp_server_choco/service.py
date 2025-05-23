@@ -12,26 +12,31 @@ Since: 1.0.0
 import subprocess
 import re
 import shutil
-from mcp_server_choco.util import setup_logger
+from mcp_commons.exception import McpCommonsError
+from mcp_commons.util import setup_logger
 
 logger = setup_logger(__name__)
+
 
 _TLS_1_2_PROTOCOL = 3072
 _PACKAGE_NAME_INDEX = 0
 _PACKAGE_VERSION_INDEX = 1
 
-class ChocolateyNotInstalledError(Exception):
-    """Exception raised when Chocolatey is not installed or not available in PATH"""
 
-class ChocolateyCommandError(Exception):
-    """Exception raised when a Chocolatey command fails"""
+class ChocolateyNotInstalledError(McpCommonsError):
+    """Exception raised when Chocolatey is not installed or not available in PATH."""
+
+
+class ChocolateyCommandError(McpCommonsError):
+    """Exception raised when a Chocolatey command fails."""
+
 
 def install_chocolatey() -> bool:
     """Install Chocolatey package manager if not already installed.
-    
+
     Returns:
         bool: True if installation was successful or Chocolatey was already installed, False otherwise.
-        
+
     Raises:
         ChocolateyCommandError: If there is an error during installation.
     """
@@ -52,10 +57,10 @@ def install_chocolatey() -> bool:
         )
 
         with subprocess.Popen(
-            ['powershell.exe', '-Command', elevated_command],
+            ["powershell.exe", "-Command", elevated_command],
             stdin=None,
             stdout=None,
-            stderr=None
+            stderr=None,
         ) as process:
             process.wait()
             success = process.returncode == 0
@@ -64,31 +69,37 @@ def install_chocolatey() -> bool:
             logger.info("Chocolatey installation completed successfully")
             return True
 
-        logger.error("Failed to install Chocolatey: Installation returned non-zero status code")
+        logger.error(
+            "Failed to install Chocolatey: Installation returned non-zero status code"
+        )
         return False
     except Exception as e:
         logger.error("Error installing Chocolatey: %s", str(e))
         raise ChocolateyCommandError(f"Failed to install Chocolatey: {str(e)}") from e
 
+
 def _validate_choco_command():
     """Validates if Chocolatey is available in the system PATH.
-    
+
     Raises:
         ChocolateyNotInstalledError: If Chocolatey is not installed or not in PATH.
     """
     if not shutil.which("choco"):
         logger.error("Chocolatey (choco) command is not available in PATH")
-        raise ChocolateyNotInstalledError("Chocolatey is not installed or not available in PATH")
+        raise ChocolateyNotInstalledError(
+            "Chocolatey is not installed or not available in PATH"
+        )
+
 
 def _run_choco_command(args: list[str]) -> str:
     """Run a Chocolatey command and return its output.
-    
+
     Args:
         args: List of command arguments to pass to Chocolatey.
-        
+
     Returns:
         str: The command output as a string.
-        
+
     Raises:
         ChocolateyCommandError: If the command fails or no arguments are provided.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -102,23 +113,23 @@ def _run_choco_command(args: list[str]) -> str:
     try:
         logger.debug("Running Chocolatey command with args: %s", args)
         process = subprocess.run(
-            ["choco"] + args,
-            capture_output=True,
-            text=True,
-            check=True
+            ["choco"] + args, capture_output=True, text=True, check=True
         )
-        logger.debug("Command completed successfully. Output: %s", process.stdout.strip())
+        logger.debug(
+            "Command completed successfully. Output: %s", process.stdout.strip()
+        )
         return process.stdout.strip()
     except subprocess.CalledProcessError as e:
         logger.error("Failed to run Chocolatey command: %s", e)
         raise ChocolateyCommandError(f"Failed to run Chocolatey command: {e}") from e
 
+
 def list_installed_packages() -> list[str]:
     """Get a list of installed Chocolatey packages.
-    
+
     Returns:
         list[str]: List of installed packages in "name (version)" format.
-        
+
     Raises:
         ChocolateyCommandError: If there is an error listing packages.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -130,13 +141,13 @@ def list_installed_packages() -> list[str]:
             logger.debug("No packages found")
             return []
 
-        packages = output.split('\n')
-        pattern = r'^[a-zA-Z0-9.-]+\s+[\d.]+$'
+        packages = output.split("\n")
+        pattern = r"^[a-zA-Z0-9.-]+\s+[\d.]+$"
         formatted_packages = []
         for pkg in packages:
             pkg = pkg.strip()
             if pkg and re.match(pattern, pkg):
-                name, version = pkg.split(' ', 1)
+                name, version = pkg.split(" ", 1)
                 formatted_packages.append(f"{name} ({version})")
 
         logger.debug("Found %d packages", len(formatted_packages))
@@ -145,14 +156,17 @@ def list_installed_packages() -> list[str]:
         raise
     except Exception as e:
         logger.error("Failed to list Chocolatey packages: %s", str(e))
-        raise ChocolateyCommandError(f"Failed to list Chocolatey packages: {str(e)}") from e
+        raise ChocolateyCommandError(
+            f"Failed to list Chocolatey packages: {str(e)}"
+        ) from e
+
 
 def list_sources() -> list[str]:
     """Get a list of configured Chocolatey package sources.
-    
+
     Returns:
         list[str]: List of source names.
-        
+
     Raises:
         ChocolateyCommandError: If there is an error listing sources.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -164,12 +178,12 @@ def list_sources() -> list[str]:
             logger.debug("No sources found")
             return []
 
-        sources = output.split('\n')
+        sources = output.split("\n")
         formatted_sources = []
         # Skip the first entry and Chocolatey header
         for source in sources[1:]:
-            if source and not source.startswith('Chocolatey'):
-                parts = source.split('|')
+            if source and not source.startswith("Chocolatey"):
+                parts = source.split("|")
                 # Must have all three parts: name, URL, and priority
                 if len(parts) >= 3:
                     formatted_sources.append(parts[0].strip())
@@ -180,17 +194,20 @@ def list_sources() -> list[str]:
         raise
     except Exception as e:
         logger.error("Failed to list Chocolatey sources: %s", str(e))
-        raise ChocolateyCommandError(f"Failed to list Chocolatey sources: {str(e)}") from e
+        raise ChocolateyCommandError(
+            f"Failed to list Chocolatey sources: {str(e)}"
+        ) from e
+
 
 def _run_elevated_choco_command(command: str) -> bool:
     """Run a Chocolatey command with elevated (administrator) privileges.
-    
+
     Args:
         command: The Chocolatey command to run.
-        
+
     Returns:
         bool: True if command executed successfully, False otherwise.
-        
+
     Raises:
         ChocolateyCommandError: If the command fails or is empty.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -205,29 +222,34 @@ def _run_elevated_choco_command(command: str) -> bool:
         logger.info("Running elevated Chocolatey command: %s", command)
         powershell_command = f'Start-Process -FilePath "choco" -ArgumentList "{command}" -Verb RunAs -Wait'
         with subprocess.Popen(
-            ['powershell.exe', '-Command', powershell_command],
+            ["powershell.exe", "-Command", powershell_command],
             stdin=None,
             stdout=None,
-            stderr=None
+            stderr=None,
         ) as process:
             process.wait()
             success = process.returncode == 0
-            logger.debug("Elevated command completed with return code: %d", process.returncode)
+            logger.debug(
+                "Elevated command completed with return code: %d", process.returncode
+            )
             return success
     except Exception as e:
         logger.error("Failed to run elevated Chocolatey command: %s", str(e))
-        raise ChocolateyCommandError(f"Failed to run elevated Chocolatey command: {str(e)}") from e
+        raise ChocolateyCommandError(
+            f"Failed to run elevated Chocolatey command: {str(e)}"
+        ) from e
+
 
 def install_package(package_name: str, version: str | None = None) -> bool:
     """Install a Chocolatey package.
-    
+
     Args:
         package_name: Name of the package to install.
         version: Optional specific version to install.
-        
+
     Returns:
         bool: True if installation was successful, False otherwise.
-        
+
     Raises:
         ChocolateyCommandError: If there is an error during installation or package name is empty.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -237,7 +259,11 @@ def install_package(package_name: str, version: str | None = None) -> bool:
         raise ChocolateyCommandError("Package name cannot be empty")
 
     try:
-        logger.info("Installing package: %s%s", package_name, f" version {version}" if version else "")
+        logger.info(
+            "Installing package: %s%s",
+            package_name,
+            f" version {version}" if version else "",
+        )
         command = f"install -y {package_name}"
         if version:
             command += f" --version={version}"
@@ -248,17 +274,20 @@ def install_package(package_name: str, version: str | None = None) -> bool:
         raise
     except Exception as e:
         logger.error("Failed to install package %s: %s", package_name, str(e))
-        raise ChocolateyCommandError(f"Failed to install package {package_name}: {str(e)}") from e
+        raise ChocolateyCommandError(
+            f"Failed to install package {package_name}: {str(e)}"
+        ) from e
+
 
 def uninstall_package(package_name: str) -> bool:
     """Uninstall a Chocolatey package.
-    
+
     Args:
         package_name: Name of the package to uninstall.
-        
+
     Returns:
         bool: True if uninstallation was successful, False otherwise.
-        
+
     Raises:
         ChocolateyCommandError: If there is an error during uninstallation or package name is empty.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -276,18 +305,21 @@ def uninstall_package(package_name: str) -> bool:
         raise
     except Exception as e:
         logger.error("Failed to uninstall package %s: %s", package_name, str(e))
-        raise ChocolateyCommandError(f"Failed to uninstall package {package_name}: {str(e)}") from e
+        raise ChocolateyCommandError(
+            f"Failed to uninstall package {package_name}: {str(e)}"
+        ) from e
+
 
 def upgrade_package(package_name: str, version: str | None = None) -> bool:
     """Upgrade a Chocolatey package to latest version or specific version.
-    
+
     Args:
         package_name: Name of the package to upgrade.
         version: Optional specific version to upgrade to.
-        
+
     Returns:
         bool: True if upgrade was successful, False otherwise.
-        
+
     Raises:
         ChocolateyCommandError: If there is an error during upgrade or package name is empty.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -297,7 +329,11 @@ def upgrade_package(package_name: str, version: str | None = None) -> bool:
         raise ChocolateyCommandError("Package name cannot be empty")
 
     try:
-        logger.info("Upgrading package: %s%s", package_name, f" to version {version}" if version else "")
+        logger.info(
+            "Upgrading package: %s%s",
+            package_name,
+            f" to version {version}" if version else "",
+        )
         command = f"upgrade -y {package_name}"
         if version:
             command += f" --version={version}"
@@ -308,17 +344,20 @@ def upgrade_package(package_name: str, version: str | None = None) -> bool:
         raise
     except Exception as e:
         logger.error("Failed to upgrade package %s: %s", package_name, str(e))
-        raise ChocolateyCommandError(f"Failed to upgrade package {package_name}: {str(e)}") from e
+        raise ChocolateyCommandError(
+            f"Failed to upgrade package {package_name}: {str(e)}"
+        ) from e
+
 
 def list_available_packages(search_term: str = "") -> list[str]:
     """Search for available Chocolatey packages.
-    
+
     Args:
         search_term: Optional term to filter packages. If empty, lists all packages.
-        
+
     Returns:
         list[str]: List of available packages in "name (version)" format.
-        
+
     Raises:
         ChocolateyCommandError: If there is an error listing packages.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -334,15 +373,18 @@ def list_available_packages(search_term: str = "") -> list[str]:
             logger.debug("No packages found")
             return []
 
-        packages = output.split('\n')
+        packages = output.split("\n")
         formatted_packages = []
         for pkg in packages:
             pkg = pkg.strip()
             if pkg:
                 # Package info is returned as name|version
-                parts = pkg.split('|')
+                parts = pkg.split("|")
                 if len(parts) >= 2:
-                    name, version = parts[_PACKAGE_NAME_INDEX], parts[_PACKAGE_VERSION_INDEX]
+                    name, version = (
+                        parts[_PACKAGE_NAME_INDEX],
+                        parts[_PACKAGE_VERSION_INDEX],
+                    )
                     formatted_packages.append(f"{name} ({version})")
 
         logger.debug("Found %d available packages", len(formatted_packages))
@@ -351,27 +393,30 @@ def list_available_packages(search_term: str = "") -> list[str]:
         raise
     except Exception as e:
         logger.error("Failed to list available Chocolatey packages: %s", str(e))
-        raise ChocolateyCommandError(f"Failed to list available Chocolatey packages: {str(e)}") from e
+        raise ChocolateyCommandError(
+            f"Failed to list available Chocolatey packages: {str(e)}"
+        ) from e
+
 
 def add_source(
     source_name: str,
     source_url: str,
     username: str | None = None,
     password: str | None = None,
-    priority: int = 0
+    priority: int = 0,
 ) -> bool:
     """Add a new Chocolatey package source.
-    
+
     Args:
         source_name: Name of the source to add.
         source_url: URL of the package source.
         username: Optional username for authenticated sources.
         password: Optional password for authenticated sources.
         priority: Optional priority for the source (0 is the default).
-        
+
     Returns:
         bool: True if source was added successfully, False otherwise.
-        
+
     Raises:
         ChocolateyCommandError: If there is an error adding the source or required parameters are missing.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -408,17 +453,20 @@ def add_source(
         raise
     except Exception as e:
         logger.error("Failed to add source %s: %s", source_name, str(e))
-        raise ChocolateyCommandError(f"Failed to add source {source_name}: {str(e)}") from e
+        raise ChocolateyCommandError(
+            f"Failed to add source {source_name}: {str(e)}"
+        ) from e
+
 
 def remove_source(source_name: str) -> bool:
     """Remove a Chocolatey package source.
-    
+
     Args:
         source_name: Name of the source to remove.
-        
+
     Returns:
         bool: True if source was removed successfully, False otherwise.
-        
+
     Raises:
         ChocolateyCommandError: If there is an error removing the source or source name is empty.
         ChocolateyNotInstalledError: If Chocolatey is not installed.
@@ -437,4 +485,6 @@ def remove_source(source_name: str) -> bool:
         raise
     except Exception as e:
         logger.error("Failed to remove source %s: %s", source_name, str(e))
-        raise ChocolateyCommandError(f"Failed to remove source {source_name}: {str(e)}") from e
+        raise ChocolateyCommandError(
+            f"Failed to remove source {source_name}: {str(e)}"
+        ) from e
