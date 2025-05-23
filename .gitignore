@@ -4,3 +4,13 @@ __pycache__/
 mcp-servers.iml
 *.log
 *.coverage
+*.code-workspace
+
+*.py[cod]
+*$py.class
+
+htmlcov/
+.cache
+.env
+.env.*
+*.pytest_cache/

@@ -1,9 +1,68 @@
+
+# Set default behavior to automatically normalize line endings to LF for all text files
 * text=auto eol=lf
+
+# Explicitly declare text files to always use LF
 *.py text eol=lf
 *.md text eol=lf
 *.toml text eol=lf
-*.lock text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.ini text eol=lf
+*.txt text eol=lf
+*.rst text eol=lf
 *.json text eol=lf
-*.js text eol=lf
-*.css text eol=lf
-*.html text eol=lf
+*.csv text eol=lf
+*.tsv text eol=lf
+*.ipynb text eol=lf
+
+# Explicitly declare binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.bz2 binary
+*.xz binary
+*.7z binary
+*.mp3 binary
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.wav binary
+*.ogg binary
+*.flac binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.svg binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.pyd binary
+*.pyo binary
+*.pyc binary
+*.class binary
+*.jar binary
+*.war binary
+*.ear binary
+*.swf binary
+*.psd binary
+*.ai binary
+*.sketch binary
+*.blend binary
+*.fbx binary
+*.3ds binary
+*.dae binary
+*.obj binary
+*.stl binary
+*.glb binary
+*.gltf binary
+*.bin binary

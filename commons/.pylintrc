@@ -1,0 +1,31 @@
+[MASTER]
+ignore=__pycache__,.venv
+
+[MESSAGES CONTROL]
+disable=C0114,C0115,C0116
+
+[FORMAT]
+max-line-length=120
+indent-string='    '
+
+[REPORTS]
+output-format=colorized
+
+[DESIGN]
+max-args=10
+max-locals=20
+max-returns=6
+max-branches=12
+max-statements=50
+max-parents=7
+max-attributes=10
+max-public-methods=20
+
+[TYPECHECK]
+generated-members=numpy.*,torch.*
+
+[IMPORTS]
+known-standard-library=tomlkit
+
+[LOGGING]
+logging-modules=logging
