@@ -11,35 +11,42 @@ Since: 1.0.0
 
 import subprocess
 import shutil
-from mcp_server_winget.util import setup_logger
+from mcp_commons.util import setup_logger
+from mcp_commons.exception import McpCommonsError
 
 logger = setup_logger(__name__)
 
-class WingetNotInstalledError(Exception):
-    """Exception raised when Winget is not installed or not available in PATH"""
 
-class WingetCommandError(Exception):
-    """Exception raised when a Winget command fails"""
+class WingetNotInstalledError(McpCommonsError):
+    """Exception raised when Winget is not installed or not available in PATH."""
+
+
+class WingetCommandError(McpCommonsError):
+    """Exception raised when a Winget command fails."""
+
 
 def _validate_winget_command():
     """Validates if Winget is available in the system PATH.
-    
+
     Raises:
         WingetNotInstalledError: If Winget is not installed or not in PATH.
     """
     if not shutil.which("winget"):
         logger.error("Winget command is not available in PATH")
-        raise WingetNotInstalledError("Winget is not installed or not available in PATH")
+        raise WingetNotInstalledError(
+            "Winget is not installed or not available in PATH"
+        )
+
 
 def _run_winget_command(args: list[str]) -> str:
     """Run a Winget command and return its output.
-    
+
     Args:
         args: List of command arguments to pass to Winget.
-        
+
     Returns:
         str: The command output as a string.
-        
+
     Raises:
         WingetCommandError: If the command fails or no arguments are provided.
         WingetNotInstalledError: If Winget is not installed.
@@ -56,9 +63,9 @@ def _run_winget_command(args: list[str]) -> str:
             ["winget"] + args,
             capture_output=True,
             text=True,
-            encoding='utf-8',
-            errors='replace',
-            check=True
+            encoding="utf-8",
+            errors="replace",
+            check=True,
         )
         output = process.stdout.strip() if process.stdout else ""
         logger.debug("Command completed successfully. Output: %s", output)
@@ -67,15 +74,16 @@ def _run_winget_command(args: list[str]) -> str:
         logger.error("Failed to run Winget command: %s", e)
         raise WingetCommandError(f"Failed to run Winget command: {e}") from e
 
+
 def _run_elevated_winget_command(args: list[str]) -> str:
     """Run a Winget command with elevated privileges and return its output.
-    
+
     Args:
         args: List of command arguments to pass to Winget.
-        
+
     Returns:
         str: The command output as a string.
-        
+
     Raises:
         WingetCommandError: If the command fails or no arguments are provided.
         WingetNotInstalledError: If Winget is not installed.
@@ -89,17 +97,18 @@ def _run_elevated_winget_command(args: list[str]) -> str:
     try:
         logger.debug("Running elevated Winget command with args: %s", args)
         # Escape arguments that contain spaces
-        winget_args = ' '.join(f'"""{arg}"""' if ' ' in arg else arg for arg in args)
+        winget_args = " ".join(f'"""{arg}"""' if " " in arg else arg for arg in args)
 
-        ps_script = f'Start-Process winget -ArgumentList "{winget_args}" -Verb runas -Wait'
+        ps_script = (
+            f'Start-Process winget -ArgumentList "{winget_args}" -Verb runas -Wait'
+        )
 
-        process = subprocess.run([
-            "powershell.exe",
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            ps_script
-        ], capture_output=True, text=True, check=True)
+        process = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", ps_script],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
 
         if process.returncode == 0:
             logger.debug("Elevated command completed successfully")
@@ -111,14 +120,17 @@ def _run_elevated_winget_command(args: list[str]) -> str:
     except subprocess.CalledProcessError as e:
         error_msg = e.stderr.strip() if e.stderr else str(e)
         logger.error("Failed to run elevated Winget command: %s", error_msg)
-        raise WingetCommandError(f"Failed to run elevated Winget command: {error_msg}") from e
+        raise WingetCommandError(
+            f"Failed to run elevated Winget command: {error_msg}"
+        ) from e
+
 
 def list_installed_packages() -> list[str]:
     """Get a list of installed Winget packages.
-    
+
     Returns:
         list[str]: List of installed packages in "name (version)" format.
-        
+
     Raises:
         WingetCommandError: If there is an error listing packages.
         WingetNotInstalledError: If Winget is not installed.
@@ -130,11 +142,11 @@ def list_installed_packages() -> list[str]:
             logger.debug("No packages found")
             return []
 
-        packages = output.split('\n')
+        packages = output.split("\n")
         formatted_packages = []
         for pkg in packages:
             pkg = pkg.strip()
-            if pkg and not pkg.startswith(('|', '/', 'â', '\\', ' ')):
+            if pkg and not pkg.startswith(("|", "/", "â", "\\", " ")):
                 formatted_packages.append(pkg)
 
         logger.debug("Found %d packages", len(formatted_packages))
@@ -145,12 +157,13 @@ def list_installed_packages() -> list[str]:
         logger.error("Failed to list Winget packages: %s", str(e))
         raise WingetCommandError(f"Failed to list Winget packages: {str(e)}") from e
 
+
 def list_sources() -> list[str]:
     """Get a list of configured Winget package sources.
-    
+
     Returns:
         list[str]: List of source names.
-        
+
     Raises:
         WingetCommandError: If there is an error listing sources.
         WingetNotInstalledError: If Winget is not installed.
@@ -162,7 +175,7 @@ def list_sources() -> list[str]:
             logger.debug("No sources found")
             return []
 
-        sources = output.split('\n')
+        sources = output.split("\n")
         formatted_sources = [source.strip() for source in sources if source.strip()]
 
         logger.debug("Found %d sources", len(formatted_sources))
@@ -173,16 +186,17 @@ def list_sources() -> list[str]:
         logger.error("Failed to list Winget sources: %s", str(e))
         raise WingetCommandError(f"Failed to list Winget sources: {str(e)}") from e
 
+
 def install_package(package_name: str, version: str | None = None) -> bool:
     """Install a Winget package.
-    
+
     Args:
         package_name: Name of the package to install.
         version: Optional specific version to install.
-        
+
     Returns:
         bool: True if installation was successful, False otherwise.
-        
+
     Raises:
         WingetCommandError: If there is an error during installation or package name is empty.
         WingetNotInstalledError: If Winget is not installed.
@@ -192,7 +206,11 @@ def install_package(package_name: str, version: str | None = None) -> bool:
         raise WingetCommandError("Package name cannot be empty")
 
     try:
-        logger.info("Installing package: %s%s", package_name, f" version {version}" if version else "")
+        logger.info(
+            "Installing package: %s%s",
+            package_name,
+            f" version {version}" if version else "",
+        )
         args = ["install", package_name]
         if version:
             args.extend(["--version", version])
@@ -203,17 +221,20 @@ def install_package(package_name: str, version: str | None = None) -> bool:
         raise
     except Exception as e:
         logger.error("Failed to install package %s: %s", package_name, str(e))
-        raise WingetCommandError(f"Failed to install package {package_name}: {str(e)}") from e
+        raise WingetCommandError(
+            f"Failed to install package {package_name}: {str(e)}"
+        ) from e
+
 
 def uninstall_package(package_name: str) -> bool:
     """Uninstall a Winget package.
-    
+
     Args:
         package_name: Name of the package to uninstall.
-        
+
     Returns:
         bool: True if uninstallation was successful, False otherwise.
-        
+
     Raises:
         WingetCommandError: If there is an error during uninstallation or package name is empty.
         WingetNotInstalledError: If Winget is not installed.
@@ -231,18 +252,21 @@ def uninstall_package(package_name: str) -> bool:
         raise
     except Exception as e:
         logger.error("Failed to uninstall package %s: %s", package_name, str(e))
-        raise WingetCommandError(f"Failed to uninstall package {package_name}: {str(e)}") from e
+        raise WingetCommandError(
+            f"Failed to uninstall package {package_name}: {str(e)}"
+        ) from e
+
 
 def upgrade_package(package_name: str, version: str | None = None) -> bool:
     """Upgrade a Winget package to latest version or specific version.
-    
+
     Args:
         package_name: Name of the package to upgrade.
         version: Optional specific version to upgrade to.
-        
+
     Returns:
         bool: True if upgrade was successful, False otherwise.
-        
+
     Raises:
         WingetCommandError: If there is an error during upgrade or package name is empty.
         WingetNotInstalledError: If Winget is not installed.
@@ -252,7 +276,11 @@ def upgrade_package(package_name: str, version: str | None = None) -> bool:
         raise WingetCommandError("Package name cannot be empty")
 
     try:
-        logger.info("Upgrading package: %s%s", package_name, f" to version {version}" if version else "")
+        logger.info(
+            "Upgrading package: %s%s",
+            package_name,
+            f" to version {version}" if version else "",
+        )
         args = ["upgrade", package_name]
         if version:
             args.extend(["--version", version])
@@ -263,17 +291,20 @@ def upgrade_package(package_name: str, version: str | None = None) -> bool:
         raise
     except Exception as e:
         logger.error("Failed to upgrade package %s: %s", package_name, str(e))
-        raise WingetCommandError(f"Failed to upgrade package {package_name}: {str(e)}") from e
+        raise WingetCommandError(
+            f"Failed to upgrade package {package_name}: {str(e)}"
+        ) from e
+
 
 def list_available_packages(search_term: str = "") -> list[str]:
     """Search for available Winget packages.
-    
+
     Args:
         search_term: Optional term to filter packages. If empty, lists all packages.
-        
+
     Returns:
         list[str]: List of available packages as raw output lines.
-        
+
     Raises:
         WingetCommandError: If there is an error listing packages.
         WingetNotInstalledError: If Winget is not installed.
@@ -290,11 +321,13 @@ def list_available_packages(search_term: str = "") -> list[str]:
             return []
 
         packages = []
-        for line in output.split('\n'):
+        for line in output.split("\n"):
             line = line.strip()
-            if (line and
-                not line.startswith(('|', '/', 'â', '\\', ' ')) and
-                not line.startswith('No package found matching')):
+            if (
+                line
+                and not line.startswith(("|", "/", "â", "\\", " "))
+                and not line.startswith("No package found matching")
+            ):
                 packages.append(line)
 
         logger.debug("Found %d available packages", len(packages))
@@ -303,23 +336,24 @@ def list_available_packages(search_term: str = "") -> list[str]:
         raise
     except Exception as e:
         logger.error("Failed to list available Winget packages: %s", str(e))
-        raise WingetCommandError(f"Failed to list available Winget packages: {str(e)}") from e
+        raise WingetCommandError(
+            f"Failed to list available Winget packages: {str(e)}"
+        ) from e
+
 
 def add_source(
-    source_name: str,
-    source_url: str,
-    source_type: str | None = None
+    source_name: str, source_url: str, source_type: str | None = None
 ) -> bool:
     """Add a new Winget package source.
-    
+
     Args:
         source_name: Name of the source to add.
         source_url: URL of the package source.
         source_type: Type of the package source (defaults to 'Microsoft.Rest').
-        
+
     Returns:
         bool: True if source was added successfully, False otherwise.
-        
+
     Raises:
         WingetCommandError: If there is an error adding the source or required parameters are missing.
         WingetNotInstalledError: If Winget is not installed.
@@ -333,10 +367,26 @@ def add_source(
         raise WingetCommandError("Source URL cannot be empty")
 
     try:
-        logger.info("Adding source: %s with URL: %s and type: %s", source_name, source_url, source_type)
+        logger.info(
+            "Adding source: %s with URL: %s and type: %s",
+            source_name,
+            source_url,
+            source_type,
+        )
 
-        actual_source_type = source_type if source_type is not None else "Microsoft.Rest"
-        args = ["source", "add", "--name", source_name, "--arg", source_url, "--type", actual_source_type]
+        actual_source_type = (
+            source_type if source_type is not None else "Microsoft.Rest"
+        )
+        args = [
+            "source",
+            "add",
+            "--name",
+            source_name,
+            "--arg",
+            source_url,
+            "--type",
+            actual_source_type,
+        ]
 
         _run_elevated_winget_command(args)
         logger.info("Source %s added successfully", source_name)
@@ -347,15 +397,16 @@ def add_source(
         logger.error("Failed to add source %s: %s", source_name, str(e))
         raise WingetCommandError(f"Failed to add source {source_name}: {str(e)}") from e
 
+
 def remove_source(source_name: str) -> bool:
     """Remove a Winget package source.
-    
+
     Args:
         source_name: Name of the source to remove.
-        
+
     Returns:
         bool: True if source was removed successfully, False otherwise.
-        
+
     Raises:
         WingetCommandError: If there is an error removing the source or source name is empty.
         WingetNotInstalledError: If Winget is not installed.
@@ -373,4 +424,6 @@ def remove_source(source_name: str) -> bool:
         raise
     except Exception as e:
         logger.error("Failed to remove source %s: %s", source_name, str(e))
-        raise WingetCommandError(f"Failed to remove source {source_name}: {str(e)}") from e
+        raise WingetCommandError(
+            f"Failed to remove source {source_name}: {str(e)}"
+        ) from e

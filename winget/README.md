@@ -42,7 +42,7 @@ This project is an implementation of an MCP (Model Context Protocol) server for 
 
 Use the following syntax on MCP Client:
 ```sh
-poetry -C <WINGET_MCP_DIR> run python -m mcp_server_winget.server
+poetry -C <WINGET_MCP_DIR> run python -m mcp_server_winget
 ```
 
 Where **<WINGET_MCP_DIR>** is the `winget directory` inside `mcp-servers local repository directory`. 
@@ -50,7 +50,7 @@ Where **<WINGET_MCP_DIR>** is the `winget directory` inside `mcp-servers local r
 For example, if the **mcp-servers** is `C:\mcp-servers` then the **WINGET_MCP_DIR** is `C:\mcp-servers\winget`. The actual command must be:
 
 ```sh
-poetry -C C:\mcp-servers\winget run python -m mcp_server_winget.server
+poetry -C C:\mcp-servers\winget run python -m mcp_server_winget
 ```
 
 ### Available Tools

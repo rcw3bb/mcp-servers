@@ -11,17 +11,37 @@ from mcp_server_winget.controller import (
     UpgradePackageController,
     AddSourceController,
     RemoveSourceController,
-    get_controller_registry,
-    execute_tool
 )
+from mcp_server_winget.controller import ControllerRegistry
 from mcp_server_winget.service import WingetNotInstalledError
+
+
+def get_controller_registry():
+    """Return the tuple of all controller instances for testing."""
+    return ControllerRegistry().get_registry()
+
+
+def execute_tool(tool_name, arguments):
+    """Execute a tool by name using the controller registry, mimicking the server logic."""
+    registry = get_controller_registry()
+    for controller in registry:
+        if hasattr(controller, "can_execute") and controller.can_execute(tool_name):
+            try:
+                return controller.execute(tool_name, arguments)
+            except Exception as exc:
+                # Use the error handler if available
+                if hasattr(ControllerRegistry, "error_handler"):
+                    return ControllerRegistry().error_handler(
+                        exc, controller, tool_name, arguments
+                    )
+                raise
+    raise Exception("Unknown tool")
+
 
 class TestControllers:
     def test_base_controller_tool(self):
         controller = BaseController(
-            name="test",
-            description="Test controller",
-            input_schema={"type": "object"}
+            name="test", description="Test controller", input_schema={"type": "object"}
         )
         tool = controller.tool()
         assert tool.name == "test"
@@ -30,9 +50,7 @@ class TestControllers:
 
     def test_base_controller_execute(self):
         controller = BaseController(
-            name="test",
-            description="Test controller",
-            input_schema={"type": "object"}
+            name="test", description="Test controller", input_schema={"type": "object"}
         )
         with pytest.raises(NotImplementedError):
             controller.execute("test", {})
@@ -81,10 +99,9 @@ class TestControllers:
     def test_install_package_controller_with_version(self, mock_install):
         mock_install.return_value = True
         controller = InstallPackageController()
-        result = controller.execute("wg_install_package", {
-            "package_name": "test-pkg",
-            "version": "1.0.0"
-        })
+        result = controller.execute(
+            "wg_install_package", {"package_name": "test-pkg", "version": "1.0.0"}
+        )
         assert isinstance(result, list)
         assert len(result) == 1
         assert isinstance(result[0], TextContent)
@@ -104,7 +121,9 @@ class TestControllers:
     def test_uninstall_package_controller(self, mock_uninstall):
         mock_uninstall.return_value = True
         controller = UninstallPackageController()
-        result = controller.execute("wg_uninstall_package", {"package_name": "test-pkg"})
+        result = controller.execute(
+            "wg_uninstall_package", {"package_name": "test-pkg"}
+        )
         assert isinstance(result, list)
         assert len(result) == 1
         assert isinstance(result[0], TextContent)
@@ -119,7 +138,9 @@ class TestControllers:
     def test_list_available_packages_controller(self, mock_list):
         mock_list.return_value = ["package1", "package2"]
         controller = ListAvailablePackagesController()
-        result = controller.execute("wg_list_available_packages", {"search_term": "test"})
+        result = controller.execute(
+            "wg_list_available_packages", {"search_term": "test"}
+        )
         assert isinstance(result, list)
         assert len(result) == 1
         assert isinstance(result[0], TextContent)
@@ -149,10 +170,9 @@ class TestControllers:
     def test_upgrade_package_controller_with_version(self, mock_upgrade):
         mock_upgrade.return_value = True
         controller = UpgradePackageController()
-        result = controller.execute("wg_upgrade_package", {
-            "package_name": "test-pkg",
-            "version": "1.0.0"
-        })
+        result = controller.execute(
+            "wg_upgrade_package", {"package_name": "test-pkg", "version": "1.0.0"}
+        )
         assert isinstance(result, list)
         assert len(result) == 1
         assert isinstance(result[0], TextContent)
@@ -162,10 +182,10 @@ class TestControllers:
     def test_add_source_controller(self, mock_add):
         mock_add.return_value = True
         controller = AddSourceController()
-        result = controller.execute("wg_add_source", {
-            "source_name": "test-source",
-            "source_url": "https://test.com"
-        })
+        result = controller.execute(
+            "wg_add_source",
+            {"source_name": "test-source", "source_url": "https://test.com"},
+        )
         assert isinstance(result, list)
         assert len(result) == 1
         assert isinstance(result[0], TextContent)
@@ -217,9 +237,11 @@ class TestControllers:
 
     @patch("mcp_server_winget.controller.list_installed_packages")
     def test_execute_tool_winget_not_installed(self, mock_list):
-        mock_list.side_effect = WingetNotInstalledError()
+        mock_list.side_effect = WingetNotInstalledError(
+            "Winget is not installed or not available in PATH"
+        )
         result = execute_tool("wg_list_installed_packages", {})
         assert isinstance(result, list)
         assert len(result) == 1
         assert isinstance(result[0], TextContent)
-        assert "not available" in result[0].text.lower()
+        assert "not installed" in result[0].text.lower()

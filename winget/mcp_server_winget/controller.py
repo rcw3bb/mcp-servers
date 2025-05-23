@@ -1,19 +1,20 @@
-"""Controllers module for handling Winget package management operations.
+"""
+Controllers module for handling Winget package management operations.
 
-This module provides controller implementations for various Winget operations like
-installing, uninstalling, upgrading packages, and managing package sources. Each controller
-implements a specific tool functionality and handles the execution of Winget commands
-through the service layer.
+This module provides controller implementations for various Winget operations like installing, uninstalling,
+upgrading packages, and managing package sources. Each controller implements a specific tool functionality
+and handles the execution of Winget commands through the service layer.
 
 Author: Ron Webb
 Since: 1.0.0
 """
 
-from typing import Dict, Any, Sequence
-from pydantic import BaseModel
-from mcp import McpError
-from mcp.types import Tool, TextContent, ErrorData
-from mcp_server_winget.service import (
+from collections.abc import Sequence
+from mcp_commons.util import setup_logger
+from mcp_commons.controller import BaseController, AbstractControllerRegistry
+from mcp_commons.exception import McpCommonsError
+from mcp.types import TextContent
+from .service import (
     list_installed_packages,
     list_sources,
     install_package,
@@ -22,70 +23,21 @@ from mcp_server_winget.service import (
     upgrade_package,
     add_source,
     remove_source,
-    WingetNotInstalledError
+    WingetNotInstalledError,
 )
-from mcp_server_winget.util import setup_logger
 
 logger = setup_logger(__name__)
 
-class BaseController(BaseModel):
-    """Base class for all controllers.
-
-    Attributes:
-        name (str): The name of tool.
-        description (str): A brief description of the tool's functionality.
-        input_schema (Dict[str, Any]): The JSON schema for the input arguments.
-    """
-    name: str
-    description: str
-    input_schema: Dict[str, Any]
-
-    def tool(self) -> Tool:
-        """Create a Tool object representing this controller.
-
-        Returns:
-            Tool: A Tool object with valid name, description, and input schema.
-        """
-        logger.debug("Creating tool for controller: %s", self.name)
-        return Tool(
-            name=self.name,
-            description=self.description,
-            inputSchema=self.input_schema
-        )
-
-    def can_execute(self, name: str) -> bool:
-        """Check if this controller can execute a given tool name.
-
-        Args:
-            name (str): The name of the tool to check.
-
-        Returns:
-            bool: True if the controller can execute the tool, False otherwise.
-        """
-        can_exec = self.name == name
-        logger.debug("Checking if controller %s can execute %s: %s", self.name, name, can_exec)
-        return can_exec
-
-    def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
-        """Execute the tool with the given name and arguments.
-
-        Args:
-            name (str): The name of the tool to execute.
-            arguments (dict): The arguments for the tool.
-
-        Raises:
-            NotImplementedError: This method must be implemented by subclasses.
-        """
-        raise NotImplementedError("Subclasses must implement execute method")
 
 class ListInstalledPackagesController(BaseController):
     """Controller for listing installed Winget packages."""
+
     name: str = "wg_list_installed_packages"
     description: str = "Lists all installed Winget packages."
-    input_schema: Dict[str, Any] = {
+    input_schema: dict[str, object] = {
         "type": "object",
         "required": [],
-        "properties": {}
+        "properties": {},
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -103,14 +55,16 @@ class ListInstalledPackagesController(BaseController):
         logger.debug("Found %d installed packages", len(packages))
         return [TextContent(type="text", text="\n".join(packages))]
 
+
 class ListSourcesController(BaseController):
     """Controller for listing Winget sources."""
+
     name: str = "wg_list_sources"
     description: str = "Lists all Winget sources."
-    input_schema: Dict[str, Any] = {
+    input_schema: dict[str, object] = {
         "type": "object",
         "required": [],
-        "properties": {}
+        "properties": {},
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -128,23 +82,25 @@ class ListSourcesController(BaseController):
         logger.debug("Found %d sources", len(sources))
         return [TextContent(type="text", text="\n".join(sources))]
 
+
 class InstallPackageController(BaseController):
     """Controller for installing a Winget package."""
+
     name: str = "wg_install_package"
     description: str = "Installs a Winget package."
-    input_schema: Dict[str, Any] = {
+    input_schema: dict[str, object] = {
         "type": "object",
         "required": ["package_name"],
         "properties": {
             "package_name": {
                 "type": "string",
-                "description": "The name of the package to install."
+                "description": "The name of the package to install.",
             },
             "version": {
                 "type": "string",
-                "description": "Optional specific version to install"
-            }
-        }
+                "description": "Optional specific version to install",
+            },
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -170,19 +126,21 @@ class InstallPackageController(BaseController):
         status = "installed" if result else "installation failed."
         return [TextContent(type="text", text=f"{package_name}{version_text} {status}")]
 
+
 class UninstallPackageController(BaseController):
     """Controller for uninstalling a Winget package."""
+
     name: str = "wg_uninstall_package"
     description: str = "Uninstalls a Winget package."
-    input_schema: Dict[str, Any] = {
+    input_schema: dict[str, object] = {
         "type": "object",
         "required": ["package_name"],
         "properties": {
             "package_name": {
                 "type": "string",
-                "description": "The name of the package to uninstall."
+                "description": "The name of the package to uninstall.",
             }
-        }
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -203,24 +161,32 @@ class UninstallPackageController(BaseController):
         logger.info("Uninstalling package: %s", package_name)
         result = uninstall_package(package_name)
         logger.debug("Uninstallation result: %s", result)
-        return [TextContent(
-            type="text",
-            text=f"{package_name} uninstalled" if result else f"Failed to uninstall {package_name}."
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=(
+                    f"{package_name} uninstalled"
+                    if result
+                    else f"Failed to uninstall {package_name}."
+                ),
+            )
+        ]
+
 
 class ListAvailablePackagesController(BaseController):
     """Controller for listing available Winget packages filtered by search term."""
+
     name: str = "wg_list_available_packages"
     description: str = "Lists available Winget packages filtered by search term."
-    input_schema: Dict[str, Any] = {
+    input_schema: dict[str, object] = {
         "type": "object",
         "required": ["search_term"],
         "properties": {
             "search_term": {
                 "type": "string",
-                "description": "Search term to filter packages"
+                "description": "Search term to filter packages",
             }
-        }
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -243,23 +209,25 @@ class ListAvailablePackagesController(BaseController):
         logger.debug("Found %d available packages", len(packages))
         return [TextContent(type="text", text="\n".join(packages))]
 
+
 class UpgradePackageController(BaseController):
     """Controller for upgrading a Winget package."""
+
     name: str = "wg_upgrade_package"
     description: str = "Upgrades a Winget package."
-    input_schema: Dict[str, Any] = {
+    input_schema: dict[str, object] = {
         "type": "object",
         "required": ["package_name"],
         "properties": {
             "package_name": {
                 "type": "string",
-                "description": "The name of the package to upgrade."
+                "description": "The name of the package to upgrade.",
             },
             "version": {
                 "type": "string",
-                "description": "Optional specific version to upgrade to"
-            }
-        }
+                "description": "Optional specific version to upgrade to",
+            },
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -278,34 +246,44 @@ class UpgradePackageController(BaseController):
             logger.error("Package name is required but not provided")
             raise ValueError("Package name is required.")
 
-        logger.info("Upgrading package: %s%s", package_name, f" to version {version}" if version else "")
+        logger.info(
+            "Upgrading package: %s%s",
+            package_name,
+            f" to version {version}" if version else "",
+        )
         result = upgrade_package(package_name, version)
         logger.debug("Upgrade result: %s", result)
         version_text = f" version {version}" if version else ""
         upgrade_text = "upgraded successfully" if result else "upgrade failed."
-        return [TextContent(type="text", text=f"{package_name}{version_text} {upgrade_text}")]
+        return [
+            TextContent(
+                type="text", text=f"{package_name}{version_text} {upgrade_text}"
+            )
+        ]
+
 
 class AddSourceController(BaseController):
     """Controller for adding a Winget package source."""
+
     name: str = "wg_add_source"
     description: str = "Adds a new Winget source repository."
-    input_schema: Dict[str, Any] = {
+    input_schema: dict[str, object] = {
         "type": "object",
         "required": ["source_name", "source_url"],
         "properties": {
             "source_name": {
                 "type": "string",
-                "description": "The name of the source to add."
+                "description": "The name of the source to add.",
             },
             "source_url": {
                 "type": "string",
-                "description": "URL of the package source."
+                "description": "URL of the package source.",
             },
             "type": {
                 "type": "string",
                 "description": "The type of the package source (optional).",
-            }
-        }
+            },
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -330,28 +308,41 @@ class AddSourceController(BaseController):
             logger.error("Source URL is required but not provided")
             raise ValueError("Source URL is required.")
 
-        logger.info("Adding source: %s with URL: %s and type: %s", source_name, source_url, source_type)
+        logger.info(
+            "Adding source: %s with URL: %s and type: %s",
+            source_name,
+            source_url,
+            source_type,
+        )
         result = add_source(source_name, source_url, source_type)
         logger.debug("Add source operation result: %s", result)
 
-        return [TextContent(
-            type="text",
-            text=f"Source '{source_name}' added successfully" if result else f"Failed to add source '{source_name}'"
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=(
+                    f"Source '{source_name}' added successfully"
+                    if result
+                    else f"Failed to add source '{source_name}'"
+                ),
+            )
+        ]
+
 
 class RemoveSourceController(BaseController):
     """Controller for removing a Winget package source."""
+
     name: str = "wg_remove_source"
     description: str = "Removes a Winget source repository."
-    input_schema: Dict[str, Any] = {
+    input_schema: dict[str, object] = {
         "type": "object",
         "required": ["source_name"],
         "properties": {
             "source_name": {
                 "type": "string",
-                "description": "The name of the source to remove."
+                "description": "The name of the source to remove.",
             }
-        }
+        },
     }
 
     def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
@@ -376,53 +367,35 @@ class RemoveSourceController(BaseController):
 
         success_msg = f"Source '{source_name}' removed successfully"
         failure_msg = f"Failed to remove source '{source_name}'"
-        return [TextContent(
-            type="text",
-            text=success_msg if result else failure_msg
-        )]
+        return [TextContent(type="text", text=success_msg if result else failure_msg)]
 
-def get_controller_registry() -> tuple[BaseController]:
-    """Retrieve the registry of all available controllers.
 
-    Returns:
-        tuple[BaseController]: A tuple containing all controller instances.
+class ControllerRegistry(AbstractControllerRegistry):
+    """Registry for managing controllers.
+
+    This class provides methods to retrieve all available controllers.
     """
-    return (
-        ListInstalledPackagesController(),
-        ListSourcesController(),
-        InstallPackageController(),
-        UninstallPackageController(),
-        ListAvailablePackagesController(),
-        UpgradePackageController(),
-        AddSourceController(),
-        RemoveSourceController()
-    )
 
-def execute_tool(name: str, arguments: dict) -> Sequence[TextContent]:
-    """Execute a tool by its name with the provided arguments.
+    def get_registry(self) -> Sequence[BaseController]:
+        return (
+            ListInstalledPackagesController(),
+            ListSourcesController(),
+            InstallPackageController(),
+            UninstallPackageController(),
+            ListAvailablePackagesController(),
+            UpgradePackageController(),
+            AddSourceController(),
+            RemoveSourceController(),
+        )
 
-    Args:
-        name (str): The name of the tool to execute.
-        arguments (dict): A dictionary of arguments to pass to the tool.
-
-    Returns:
-        Sequence[TextContent]: The result of the tool execution as a sequence of TextContent objects.
-
-    Raises:
-        McpError: If the tool is not found or an error occurs during execution.
-    """
-    logger.info("Looking for controller to execute tool: %s", name)
-    logger.debug("Tool arguments: %s", arguments)
-    for controller in get_controller_registry():
-        if controller.can_execute(name):
-            logger.info("Found controller %s for tool %s", controller.name, name)
-            try:
-                return controller.execute(name, arguments)
-            except WingetNotInstalledError:
-                msg = "Winget is not available. Please install it first."
-                return [TextContent(type="text", text=msg)]
-            except Exception as e:
-                logger.error("Error executing tool %s: %s", name, str(e))
-                raise McpError(ErrorData(message=str(e), code=500)) from e
-    logger.error("No controller found for tool: %s", name)
-    raise McpError(ErrorData(message="Unknown tool.", code=404))
+    def error_handler(
+        self,
+        exception: McpCommonsError,
+        controller: BaseController,
+        tool_name: str,
+        arguments: dict,
+    ) -> list[TextContent]:
+        if isinstance(exception, WingetNotInstalledError):
+            msg = "Winget is not installed. Please run the 'install_winget' command first."
+            return [TextContent(type="text", text=msg)]
+        raise exception
