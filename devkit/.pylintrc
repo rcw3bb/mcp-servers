@@ -1,0 +1,13 @@
+[MASTER]
+ignore=tests
+
+[MESSAGES CONTROL]
+disable=
+
+[FORMAT]
+max-line-length=120
+
+[REPORTS]
+output-format=colorized
+
+[TYPECHECK]
