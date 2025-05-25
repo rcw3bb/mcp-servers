@@ -1,18 +1,19 @@
 
 # MCP Server Devkit
 
-A simple development kit for developers.
+A simple development kit for developers that doesn't require external application.
 
 ## :diamond_shape_with_a_dot_inside: Features
 
-- **Decoder**: Decode a JWT token
+- **Decoder:** Decode a JWT token
+- **Generator:** GUID generator
 
 ## :white_check_mark: Requirements
 
 - **Python >=3.13**
 - **Poetry 2.0** for packaging and dependency management
 
-> ℹ️  See the **appendix** for instructions on installing Poetry if needed.
+> ℹ️  See the **Appendix** for instructions on installing Poetry if needed.
 
 ## :hammer: Installation
 
@@ -50,6 +51,10 @@ poetry -C C:\mcp-servers\devkit run python -m mcp_server_devkit
 #### Decoder
 
 - `decode_jwt`: Decode a given JWT token with signature verification support.
+
+#### Generator
+
+* `generate_guid`: Generate a random GUID (UUID4) with the option to change the delimiter.
 
 ## Development
 

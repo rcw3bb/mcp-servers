@@ -9,6 +9,7 @@ import base64
 import json
 import hashlib
 import hmac
+import uuid
 from typing import Any
 from cryptography.x509 import load_pem_x509_certificate
 from cryptography.hazmat.primitives.serialization import (
@@ -20,6 +21,24 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from .models import DecodedJWT
+
+
+def generate_guid(delimiter: str | None) -> str:
+    """
+    Generates a random GUID (UUID4) as a string, with an optional delimiter between segments.
+
+    Args:
+        delimiter (str, optional): The delimiter to use between UUID segments. Defaults to no delimiter.
+
+    Returns:
+        str: The generated GUID as a string, with the specified delimiter.
+
+    Since: 1.1.0
+    """
+    guid = str(uuid.uuid4())
+    if delimiter:
+        return delimiter.join(guid.split("-"))
+    return guid
 
 
 def decode_jwt(

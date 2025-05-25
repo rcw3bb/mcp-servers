@@ -13,9 +13,48 @@ from mcp_commons.util import setup_logger
 from mcp_commons.controller import BaseController, AbstractControllerRegistry
 from mcp_commons.exception import McpCommonsError
 from mcp.types import TextContent
-from .service import decode_jwt
+from .service import decode_jwt, generate_guid
+
 
 logger = setup_logger(__name__)
+
+
+class GenerateGuidController(BaseController):
+    """
+    Controller for generating GUIDs (UUID4) with an optional delimiter.
+
+    Since: 1.1.0
+    """
+
+    name: str = "generate_guid"
+    description: str = "Generates a random GUID (UUID4) with an optional delimiter."
+    input_schema: Dict[str, Any] = {
+        "type": "object",
+        "required": [],
+        "properties": {
+            "delimiter": {
+                "type": "string",
+                "description": "Delimiter to use between UUID segments (optional).",
+                "nullable": True,
+            }
+        },
+    }
+
+    def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
+        """
+        Execute the generate_guid tool.
+
+        Args:
+            name (str): The name of the tool to execute.
+            arguments (dict): The arguments for the tool, may include 'delimiter'.
+
+        Returns:
+            Sequence[TextContent]: A sequence of TextContent objects with the generated GUID.
+        """
+        delimiter = arguments.get("delimiter")
+        guid = generate_guid(delimiter=delimiter)
+        logger.info("Generated GUID: %s", guid)
+        return [TextContent(type="text", text=guid)]
 
 
 class DecodeJWTController(BaseController):
@@ -87,7 +126,7 @@ class ControllerRegistry(AbstractControllerRegistry):
         Returns:
             Sequence[BaseController]: A sequence containing all available controller instances.
         """
-        return (DecodeJWTController(),)
+        return (DecodeJWTController(), GenerateGuidController())
 
     def error_handler(
         self,
