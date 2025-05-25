@@ -95,7 +95,7 @@ poetry run black mcp_server_devkit && poetry run pylint mcp_server_devkit
 
 ## :key: License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE.md](../LICENSE.md) file for details.
 
 ## [Changelog](CHANGELOG.md)
 
