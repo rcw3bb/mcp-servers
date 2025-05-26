@@ -13,7 +13,44 @@ from mcp_commons.util import setup_logger
 from mcp_commons.controller import BaseController, AbstractControllerRegistry
 from mcp_commons.exception import McpCommonsError
 from mcp.types import TextContent
-from .service import decode_jwt, generate_guid
+from .service import decode_jwt, generate_guid, url_encode
+
+
+class UrlEncodeController(BaseController):
+    """
+    Controller for URL encoding a string.
+
+    Since: 1.2.0
+    """
+
+    name: str = "url_encode"
+    description: str = "URL-encodes a string using percent-encoding."
+    input_schema: Dict[str, Any] = {
+        "type": "object",
+        "required": ["value"],
+        "properties": {
+            "value": {"type": "string", "description": "The string to URL encode."}
+        },
+    }
+
+    def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
+        """
+        Execute the url_encode tool.
+
+        Args:
+            name (str): The name of the tool to execute.
+            arguments (dict): The arguments for the tool, must include 'value'.
+
+        Returns:
+            Sequence[TextContent]: A sequence of TextContent objects with the URL-encoded string.
+        """
+        value = arguments.get("value")
+        if value is None:
+            logger.error("Value is required but not provided")
+            raise ValueError("Value is required.")
+        encoded = url_encode(value)
+        logger.info("URL-encoded value: %s", encoded)
+        return [TextContent(type="text", text=encoded)]
 
 
 logger = setup_logger(__name__)
@@ -126,7 +163,7 @@ class ControllerRegistry(AbstractControllerRegistry):
         Returns:
             Sequence[BaseController]: A sequence containing all available controller instances.
         """
-        return (DecodeJWTController(), GenerateGuidController())
+        return (DecodeJWTController(), GenerateGuidController(), UrlEncodeController())
 
     def error_handler(
         self,

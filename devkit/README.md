@@ -5,8 +5,9 @@ A simple development kit for developers that doesn't require external applicatio
 
 ## :diamond_shape_with_a_dot_inside: Features
 
-- **Decoder:** Decode a JWT token
-- **Generator:** GUID generator
+- **JWT Decoder:** Decode a JWT token
+- **GUID Generator:** GUID generator
+- **URL Encoder:** Encode a string as a URL-safe value
 
 ## :white_check_mark: Requirements
 
@@ -54,7 +55,11 @@ poetry -C C:\mcp-servers\devkit run python -m mcp_server_devkit
 
 #### Generator
 
-* `generate_guid`: Generate a random GUID (UUID4) with the option to change the delimiter.
+- `generate_guid`: Generate a random GUID (UUID4) with the option to change the delimiter.
+
+#### Encoder
+
+- `url_encode`: Encode a string to be safe for use in a URL (percent-encoding).
 
 ## Development
 

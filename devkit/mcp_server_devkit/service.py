@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import uuid
 from typing import Any
+from urllib.parse import quote
 from cryptography.x509 import load_pem_x509_certificate
 from cryptography.hazmat.primitives.serialization import (
     Encoding,
@@ -21,6 +22,22 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from .models import DecodedJWT
+
+
+def url_encode(value: str) -> str:
+    """
+    URL-encodes a string using percent-encoding.
+
+    Args:
+        value (str): The string to URL encode.
+
+    Returns:
+        str: The URL-encoded string.
+
+    Author: Ron Webb
+    Since: 1.2.0
+    """
+    return quote(value, safe="")
 
 
 def generate_guid(delimiter: str | None) -> str:

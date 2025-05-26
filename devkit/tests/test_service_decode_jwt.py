@@ -1,4 +1,92 @@
-# --- Begin merged content from test_service_edge.py ---
+"""
+Unit tests for the service module.
+
+Author: Ron Webb
+Since: 1.0.0
+"""
+
+import pytest
+from mcp_server_devkit import service
+import base64
+import json
+
+
+def create_jwt(payload: dict) -> str:
+    """
+    Helper to create a fake JWT token with the given payload (no signature).
+    """
+    header = base64.urlsafe_b64encode(json.dumps({"alg": "none", "typ": "JWT"}).encode()).rstrip(b'=').decode()
+    payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b'=').decode()
+    return f"{header}.{payload_b64}."
+
+
+def test_decode_jwt_valid():
+    payload = {"user": "ron", "role": "admin"}
+    token = create_jwt(payload)
+    decoded = service.decode_jwt(token)
+    assert decoded.headers["alg"] == "none"
+    assert decoded.headers["typ"] == "JWT"
+    assert decoded.data == payload
+    assert decoded.signature == ""
+
+
+def test_decode_jwt_invalid_format():
+    with pytest.raises(ValueError):
+        service.decode_jwt("invalidtoken")
+
+
+def test_decode_jwt_invalid_payload():
+    # Invalid base64 in payload
+    token = "aW52YWxpZA==.!!!."
+    with pytest.raises(ValueError):
+        service.decode_jwt(token)
+
+def test_decode_jwt_with_certificate(monkeypatch):
+    """
+    Test decode_jwt with a PEM certificate (mocked extraction and verification).
+    """
+    token = (
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9."
+        "eyJ1c2VyIjoicm9uIn0."
+        "c2lnbmF0dXJl"
+    )
+    cert = "-----BEGIN CERTIFICATE-----\nFAKECERTDATA\n-----END CERTIFICATE-----"
+    # Patch _extract_public_key_from_certificate and _verify_jwt_signature
+    monkeypatch.setattr(service, "_extract_public_key_from_certificate", lambda c: "FAKEPUBKEY")
+    monkeypatch.setattr(service, "_verify_jwt_signature", lambda p, h, s, k: True)
+    decoded = service.decode_jwt(token, certificate=cert)
+    assert decoded.signature_verified is True
+
+def test_decode_jwt_with_public_key(monkeypatch):
+    """
+    Test decode_jwt with a PEM public key (mocked verification).
+    """
+    token = (
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9."
+        "eyJ1c2VyIjoicm9uIn0."
+        "c2lnbmF0dXJl"
+    )
+    pubkey = "-----BEGIN PUBLIC KEY-----\nFAKEPUBKEYDATA\n-----END PUBLIC KEY-----"
+    monkeypatch.setattr(service, "_verify_jwt_signature", lambda p, h, s, k: True)
+    decoded = service.decode_jwt(token, public_key=pubkey)
+    assert decoded.signature_verified is True
+
+def test_decode_jwt_signature_verification_fail(monkeypatch):
+    """
+    Test decode_jwt when signature verification fails (mocked).
+    """
+    token = (
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9."
+        "eyJ1c2VyIjoicm9uIn0."
+        "c2lnbmF0dXJl"
+    )
+    pubkey = "-----BEGIN PUBLIC KEY-----\nFAKEPUBKEYDATA\n-----END PUBLIC KEY-----"
+    def fail_verify(*args, **kwargs):
+        raise Exception("Invalid signature")
+    monkeypatch.setattr(service, "_verify_jwt_signature", fail_verify)
+    decoded = service.decode_jwt(token, public_key=pubkey)
+    assert decoded.signature_verified is False
+
 def test_decode_jwt_invalid_parts():
     """
     Test decode_jwt with a token that does not have 3 parts.
@@ -126,92 +214,3 @@ def test_verify_jwt_signature_ps(monkeypatch):
     # Should raise ValueError due to invalid signature
     with pytest.raises(ValueError, match="Invalid JWT signature"):
         service._verify_jwt_signature(parts, headers, signature, pubkey)
-# --- End merged content from test_service_edge.py ---
-"""
-Unit tests for the service module.
-
-Author: Ron Webb
-Since: 1.0.0
-"""
-
-import pytest
-from mcp_server_devkit import service
-import base64
-import json
-
-
-def create_jwt(payload: dict) -> str:
-    """
-    Helper to create a fake JWT token with the given payload (no signature).
-    """
-    header = base64.urlsafe_b64encode(json.dumps({"alg": "none", "typ": "JWT"}).encode()).rstrip(b'=').decode()
-    payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b'=').decode()
-    return f"{header}.{payload_b64}."
-
-
-def test_decode_jwt_valid():
-    payload = {"user": "ron", "role": "admin"}
-    token = create_jwt(payload)
-    decoded = service.decode_jwt(token)
-    assert decoded.headers["alg"] == "none"
-    assert decoded.headers["typ"] == "JWT"
-    assert decoded.data == payload
-    assert decoded.signature == ""
-
-
-def test_decode_jwt_invalid_format():
-    with pytest.raises(ValueError):
-        service.decode_jwt("invalidtoken")
-
-
-def test_decode_jwt_invalid_payload():
-    # Invalid base64 in payload
-    token = "aW52YWxpZA==.!!!."
-    with pytest.raises(ValueError):
-        service.decode_jwt(token)
-
-def test_decode_jwt_with_certificate(monkeypatch):
-    """
-    Test decode_jwt with a PEM certificate (mocked extraction and verification).
-    """
-    token = (
-        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9."
-        "eyJ1c2VyIjoicm9uIn0."
-        "c2lnbmF0dXJl"
-    )
-    cert = "-----BEGIN CERTIFICATE-----\nFAKECERTDATA\n-----END CERTIFICATE-----"
-    # Patch _extract_public_key_from_certificate and _verify_jwt_signature
-    monkeypatch.setattr(service, "_extract_public_key_from_certificate", lambda c: "FAKEPUBKEY")
-    monkeypatch.setattr(service, "_verify_jwt_signature", lambda p, h, s, k: True)
-    decoded = service.decode_jwt(token, certificate=cert)
-    assert decoded.signature_verified is True
-
-def test_decode_jwt_with_public_key(monkeypatch):
-    """
-    Test decode_jwt with a PEM public key (mocked verification).
-    """
-    token = (
-        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9."
-        "eyJ1c2VyIjoicm9uIn0."
-        "c2lnbmF0dXJl"
-    )
-    pubkey = "-----BEGIN PUBLIC KEY-----\nFAKEPUBKEYDATA\n-----END PUBLIC KEY-----"
-    monkeypatch.setattr(service, "_verify_jwt_signature", lambda p, h, s, k: True)
-    decoded = service.decode_jwt(token, public_key=pubkey)
-    assert decoded.signature_verified is True
-
-def test_decode_jwt_signature_verification_fail(monkeypatch):
-    """
-    Test decode_jwt when signature verification fails (mocked).
-    """
-    token = (
-        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9."
-        "eyJ1c2VyIjoicm9uIn0."
-        "c2lnbmF0dXJl"
-    )
-    pubkey = "-----BEGIN PUBLIC KEY-----\nFAKEPUBKEYDATA\n-----END PUBLIC KEY-----"
-    def fail_verify(*args, **kwargs):
-        raise Exception("Invalid signature")
-    monkeypatch.setattr(service, "_verify_jwt_signature", fail_verify)
-    decoded = service.decode_jwt(token, public_key=pubkey)
-    assert decoded.signature_verified is False
