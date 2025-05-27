@@ -40,6 +40,40 @@ def url_encode(value: str) -> str:
     return quote(value, safe="")
 
 
+def encode_base64(text: str, encoding: str = "utf-8") -> str:
+    """
+    Encodes a text string to base64.
+
+    Args:
+        text (str): The text to encode.
+        encoding (str, optional): The encoding to use. Defaults to 'utf-8'.
+
+    Returns:
+        str: The base64-encoded string.
+
+    Author: Ron Webb
+    Since: 1.3.0
+    """
+    return base64.b64encode(text.encode(encoding)).decode("ascii")
+
+
+def decode_base64(b64_string: str, encoding: str = "utf-8") -> str:
+    """
+    Decodes a base64-encoded string to text.
+
+    Args:
+        b64_string (str): The base64-encoded string to decode.
+        encoding (str, optional): The encoding to use for the output string. Defaults to 'utf-8'.
+
+    Returns:
+        str: The decoded string.
+
+    Author: Ron Webb
+    Since: 1.3.0
+    """
+    return base64.b64decode(b64_string).decode(encoding)
+
+
 def generate_guid(delimiter: str | None) -> str:
     """
     Generates a random GUID (UUID4) as a string, with an optional delimiter between segments.

@@ -6,6 +6,8 @@ A simple development kit for developers that doesn't require external applicatio
 ## :diamond_shape_with_a_dot_inside: Features
 
 - **JWT Decoder:** Decode a JWT token
+- **Base64 Encoder:** Encode a string to base64
+- **Base64 Decoder:** Decode a base64-encoded string
 - **GUID Generator:** GUID generator
 - **URL Encoder:** Encode a string as a URL-safe value
 
@@ -52,6 +54,7 @@ poetry -C C:\mcp-servers\devkit run python -m mcp_server_devkit
 #### Decoder
 
 - `decode_jwt`: Decode a given JWT token with signature verification support.
+- `decode_base64`: Decode a base64-encoded string.
 
 #### Generator
 
@@ -60,6 +63,7 @@ poetry -C C:\mcp-servers\devkit run python -m mcp_server_devkit
 #### Encoder
 
 - `url_encode`: Encode a string to be safe for use in a URL (percent-encoding).
+- `encode_base64`: Encode a string to base64.
 
 ## Development
 

@@ -13,7 +13,104 @@ from mcp_commons.util import setup_logger
 from mcp_commons.controller import BaseController, AbstractControllerRegistry
 from mcp_commons.exception import McpCommonsError
 from mcp.types import TextContent
-from .service import decode_jwt, generate_guid, url_encode
+from .service import decode_jwt, generate_guid, url_encode, encode_base64, decode_base64
+
+
+class EncodeBase64Controller(BaseController):
+    """
+    Controller for encoding a string to base64.
+
+    Since: 1.3.0
+    """
+
+    name: str = "encode_base64"
+    description: str = "Encodes a text string to base64."
+    input_schema: Dict[str, Any] = {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+            "text": {"type": "string", "description": "The text to encode to base64."},
+            "encoding": {
+                "type": "string",
+                "description": "The encoding to use (default: utf-8).",
+                "nullable": True,
+            },
+        },
+    }
+
+    def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
+        """
+        Execute the encode_base64 tool.
+
+        Args:
+            name (str): The name of the tool to execute.
+            arguments (dict): The arguments for the tool, must include 'text'.
+
+        Returns:
+            Sequence[TextContent]: A sequence of TextContent objects with the base64-encoded string.
+        """
+        text = arguments.get("text")
+        encoding = arguments.get("encoding", "utf-8")
+        if text is None:
+            logger.error("Text is required but not provided")
+            raise ValueError("Text is required.")
+        try:
+            encoded = encode_base64(text, encoding=encoding)
+            logger.info("Base64-encoded value: %s", encoded)
+            return [TextContent(type="text", text=encoded)]
+        except Exception as exc:
+            logger.error("Failed to encode base64: %s", exc)
+            raise
+
+
+class DecodeBase64Controller(BaseController):
+    """
+    Controller for decoding a base64-encoded string.
+
+    Since: 1.3.0
+    """
+
+    name: str = "decode_base64"
+    description: str = "Decodes a base64-encoded string to text."
+    input_schema: Dict[str, Any] = {
+        "type": "object",
+        "required": ["b64_string"],
+        "properties": {
+            "b64_string": {
+                "type": "string",
+                "description": "The base64-encoded string to decode.",
+            },
+            "encoding": {
+                "type": "string",
+                "description": "The encoding to use for the output string (default: utf-8).",
+                "nullable": True,
+            },
+        },
+    }
+
+    def execute(self, name: str, arguments: dict) -> Sequence[TextContent]:
+        """
+        Execute the decode_base64 tool.
+
+        Args:
+            name (str): The name of the tool to execute.
+            arguments (dict): The arguments for the tool, must include 'b64_string'.
+
+        Returns:
+            Sequence[TextContent]: A sequence of TextContent objects with the decoded string.
+        """
+        b64_string = arguments.get("b64_string")
+        encoding = arguments.get("encoding", "utf-8")
+        if b64_string is None:
+            logger.error("b64_string is required but not provided")
+            raise ValueError("b64_string is required.")
+        try:
+            decoded = decode_base64(b64_string, encoding=encoding)
+            logger.info("Base64-decoded value: %s", decoded)
+            return [TextContent(type="text", text=decoded)]
+        except Exception as exc:
+            logger.error("Failed to decode base64: %s", exc)
+            raise
 
 
 class UrlEncodeController(BaseController):
@@ -163,7 +260,13 @@ class ControllerRegistry(AbstractControllerRegistry):
         Returns:
             Sequence[BaseController]: A sequence containing all available controller instances.
         """
-        return (DecodeJWTController(), GenerateGuidController(), UrlEncodeController())
+        return (
+            DecodeJWTController(),
+            GenerateGuidController(),
+            UrlEncodeController(),
+            EncodeBase64Controller(),
+            DecodeBase64Controller(),
+        )
 
     def error_handler(
         self,

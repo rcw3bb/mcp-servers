@@ -1,18 +1,20 @@
 Project info:
 - Project name: mcp_server_devkit
 - Project description: A simple development kit for developers.
+- Version: 1.3.0
 - Author name: Ron Webb
 - Author email: ron@ronella.xyz
-
-Setup instructions for the project:
-- The initial version of the project is 1.0.0.
-- Place all new source code in the `mcp_server_devkit` package and tests in the `tests` directory.
 
 Main dependencies:
 - Python >=3.13
 - Poetry 2.0
 - mcp
 - mcp-commons @ ../commons
+
+Setup instructions for the project:
+- The project version should be updated in the `pyproject.toml` file.
+- Place all new source code in the `mcp_server_devkit` package and tests in the `tests` directory.
+- The service methods should be placed in service module, the controller classes in controller module, and the model classes in model module.
 
 Dev dependencies:
 - Black for code formatting
@@ -37,7 +39,7 @@ Coding standards:
 - The tests package must mirror the structure of the source code package.
 - The test for controller module should be by controller class.
 - The test for service module should be by service method.
-- Always add docstrings to all modules, functions and classes. For modules, add author and since version.
+- Always add docstrings to all modules, functions and classes. For modules, add author and since using application version.
 - Avoid using deprecated types from 'typing' module. Use 'collections.abc' instead.
 - To run tests with coverage and generate an HTML report, use:
   `poetry run pytest --cov=mcp_server_devkit tests --cov-report html`

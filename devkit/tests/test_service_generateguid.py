@@ -4,7 +4,6 @@ Author: Ron Webb
 Since: 1.1.0
 """
 import re
-import pytest
 from mcp_server_devkit.service import generate_guid
 
 class TestGenerateGuidService:
