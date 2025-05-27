@@ -73,18 +73,13 @@ poetry -C C:\mcp-servers\chocolatey run python -m mcp_server_choco
 
 ## Development
 
-
 ### Re-adding mcp-commons
 
-If you have updated or pulled new changes to the `mcp-commons` shared library, you need to re-add it to your Poetry environment to ensure the latest version is used.
-
-Run the following command:
+If you have updated or pulled new changes to the `mcp-commons` shared library, you need to re-add it to your Poetry environment to ensure the latest version is used. Use the following PowerShell command:
 
 ```sh
-poetry run readd-mcp-commons
+poetry remove mcp-commons && poetry add mcp-commons@../commons && (Get-Content pyproject.toml) -replace 'file:.*/commons','../commons' | Set-Content pyproject.toml
 ```
-
-This script will update your local Poetry environment to use the latest version of `mcp-commons` from your local path.
 
 ### Running Tests
 

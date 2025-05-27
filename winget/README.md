@@ -69,6 +69,14 @@ poetry -C C:\mcp-servers\winget run python -m mcp_server_winget
 
 ## Development
 
+### Re-adding mcp-commons
+
+If you have updated or pulled new changes to the `mcp-commons` shared library, you need to re-add it to your Poetry environment to ensure the latest version is used. Use the following PowerShell command:
+
+```sh
+poetry remove mcp-commons && poetry add mcp-commons@../commons && (Get-Content pyproject.toml) -replace 'file:.*/commons','../commons' | Set-Content pyproject.toml
+```
+
 ### Running Tests
 
 Run the test suite using `pytest`:
